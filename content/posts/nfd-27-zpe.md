@@ -2,6 +2,7 @@
 title: "NFD27 - ZPE"
 tags:
   - nfd27
+publishdate: "2022-01-29"
 ---
 
 The first company presenting at NFD27 was [ZPE][zpe].  They talked about

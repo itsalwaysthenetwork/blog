@@ -4,6 +4,7 @@ tags:
   - nfd27
   - ntc
   - nautobot
+publishdate: "2022-01-29"
 ---
 
 > Preamble time!  [Nautobot][nautobot] vs. [NetBox][netbox] has been a

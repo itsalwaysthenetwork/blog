@@ -2,6 +2,7 @@
 title: "NFD27 - Forward Networks"
 tags:
   - nfd27
+publishdate: "2022-01-29"
 ---
 
 Day one wrapped up with [Forward Networks][fwd].  Although I've heard

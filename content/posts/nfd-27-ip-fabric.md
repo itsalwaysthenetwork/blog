@@ -2,6 +2,7 @@
 title: "NFD27 - IP Fabric"
 tags:
   - nfd27
+publishdate: "2022-02-04"
 ---
 
 Day two of NFD27 kicked off with [IP Fabric][ipf].  I hadn't heard of
