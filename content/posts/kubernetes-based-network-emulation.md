@@ -334,7 +334,7 @@ A:r1# info interface mgmt0
 A:r1#
 ```
 
-The style looks similar to Junos, including hierarchy, curl praces, and
+The style looks similar to Junos, including hierarchy, curly braces, and
 mandatory subinterfaces (`unit` from Junos) for logical configuration.
 
 There are also `show` commands and even a `show` context.
