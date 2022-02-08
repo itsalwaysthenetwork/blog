@@ -93,9 +93,9 @@ and at that point I need to be in my graph system to find what I'm
 looking for and set the time range anyway.  Obtaining metrics data just
 isn't a great use case for ChatOps.
 
-However, an integration with Forward Networks was revealed later in NFD27
+However, an integration with IP Fabric was revealed later in NFD27
 that was _extremely_ attractive: using ChatOps to do path lookups from
-Forward Networks and getting that topology (nearly) instantly in Slack.
+IP Fabric and getting that topology (nearly) instantly in Slack.
 There is so much value in that that I'd use ChatOps for that one bit of
 functionality alone.
 
