@@ -383,7 +383,7 @@ these work, let&rsquo;s start with our <code>DestinationRule</code> manifest:</p
 </span></span><span style=display:flex><span>      <span style=color:#f92672>color</span>: <span style=color:#ae81ff>green</span>
 </span></span></code></pre></div><p>This manifest tells us that, for the &ldquo;host&rdquo; <code>rewrite-app-with-istio</code>, we have
 some &ldquo;subsets&rdquo;. So, what&rsquo;s a <code>host</code>, and what are <code>subsets</code>?</p><p>The <code>host</code> is, effectively, the Kubernetes service name to which these
-<code>subsets</code> will apply. The <code>subets</code> here are effectively label selectors for
+<code>subsets</code> will apply. The <code>subsets</code> here are effectively label selectors for
 endpoints, or pods, within that service. One way we can see what these
 <code>subsets</code> are is by using <code>kubectl</code> to get the label selectors that the service
 uses, then find pods that match them and get <em>their</em> labels:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ kubectl get svc/rewrite-app-with-istio -o<span style=color:#f92672>=</span>jsonpath<span style=color:#f92672>=</span><span style=color:#e6db74>&#39;{.spec.selector}{&#34;\n\n&#34;}&#39;</span>
