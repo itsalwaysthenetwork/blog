@@ -1,324 +1,168 @@
-<!doctype html><html lang=en-us prefix="og: http://ogp.me/ns# fb: http://ogp.me/ns/fb#">
-<head lang=en-us>
-<meta charset=utf-8>
-<meta http-equiv=x-ua-compatible content="IE=edge,chrome=1">
-<meta name=HandheldFriendly content="True">
-<meta name=MobileOptimized content="320">
-<meta name=viewport content="width=device-width,initial-scale=1">
-<meta name=color-scheme content="dark light">
-<meta name=description content="This post will be a (very short) introduction to kne, a project from Google that lets you run virtual network topologies in Kubernetes. I&rsquo;m writing this as the current docs are a bit lacking for anyone who really just wants a lab topology without necessarily understanding how to do things with Kubernetes.
+<!doctype html><html lang=en-us prefix="og: http://ogp.me/ns# fb: http://ogp.me/ns/fb#"><head lang=en-us><meta charset=utf-8><meta http-equiv=x-ua-compatible content="IE=edge,chrome=1"><meta name=HandheldFriendly content="True"><meta name=MobileOptimized content="320"><meta name=viewport content="width=device-width,initial-scale=1"><meta name=color-scheme content="dark light"><meta name=description content="This post will be a (very short) introduction to kne, a project from Google that lets you run virtual network topologies in Kubernetes. I&rsquo;m writing this as the current docs are a bit lacking for anyone who really just wants a lab topology without necessarily understanding how to do things with Kubernetes.
 Prerequisites To get started, you&rsquo;ll need a few things:
- Docker Go kind kubectl  Install Docker This is the most complicated step.">
-<meta name=author content>
-<meta name=keywords content="kubernetes,kne,srlinux">
-<title>Managing Virtual Network Labs with KNE | It's Always the Network</title>
-<link rel=canonical href=https://blog.itsalwaysthe.network/posts/kubernetes-based-network-emulation/>
-<meta property="og:type" content="article">
-<meta property="og:description" content="This post will be a (very short) introduction to kne, a project from Google that lets you run virtual network topologies in Kubernetes. I&rsquo;m writing this as the current docs are a bit lacking for anyone who really just wants a lab topology without necessarily understanding how to do things with Kubernetes.
+ Docker Go kind kubectl  Install Docker This is the most complicated step."><meta name=author content><meta name=keywords content="kubernetes,kne,srlinux"><title>Managing Virtual Network Labs with KNE | It's Always the Network</title><link rel=canonical href=https://blog.itsalwaysthe.network/posts/kubernetes-based-network-emulation/><meta property="og:type" content="article"><meta property="og:description" content="This post will be a (very short) introduction to kne, a project from Google that lets you run virtual network topologies in Kubernetes. I&rsquo;m writing this as the current docs are a bit lacking for anyone who really just wants a lab topology without necessarily understanding how to do things with Kubernetes.
 Prerequisites To get started, you&rsquo;ll need a few things:
- Docker Go kind kubectl  Install Docker This is the most complicated step.">
-<meta property="og:title" content="Managing Virtual Network Labs with KNE">
-<meta property="og:site_name" content="It's Always the Network">
-<meta property="og:image:type" content="image/jpeg">
-<meta property="og:url" content="https://blog.itsalwaysthe.network/posts/kubernetes-based-network-emulation/">
-<meta property="og:locale" content="en-us">
-<meta property="article:published_time" content="2022-02-05">
-<meta property="article:modified_time" content="2022-02-05">
-<meta property="article:tag" content="kubernetes">
-<meta property="article:tag" content="kne">
-<meta property="article:tag" content="srlinux">
-<meta name=twitter:card content="summary">
-<meta name=twitter:title content="Managing Virtual Network Labs with KNE | It's Always the Network">
-<meta name=twitter:description content="This post will be a (very short) introduction to kne, a project from Google that lets you run virtual network topologies in Kubernetes. I&rsquo;m writing this as the current docs are a bit lacking for anyone who really just wants a lab topology without necessarily understanding how to do things with Kubernetes.
+ Docker Go kind kubectl  Install Docker This is the most complicated step."><meta property="og:title" content="Managing Virtual Network Labs with KNE"><meta property="og:site_name" content="It's Always the Network"><meta property="og:image:type" content="image/jpeg"><meta property="og:url" content="https://blog.itsalwaysthe.network/posts/kubernetes-based-network-emulation/"><meta property="og:locale" content="en-us"><meta property="article:published_time" content="2022-02-05"><meta property="article:modified_time" content="2022-02-05"><meta property="article:tag" content="kubernetes"><meta property="article:tag" content="kne"><meta property="article:tag" content="srlinux"><meta name=twitter:card content="summary"><meta name=twitter:title content="Managing Virtual Network Labs with KNE | It's Always the Network"><meta name=twitter:description content="This post will be a (very short) introduction to kne, a project from Google that lets you run virtual network topologies in Kubernetes. I&rsquo;m writing this as the current docs are a bit lacking for anyone who really just wants a lab topology without necessarily understanding how to do things with Kubernetes.
 Prerequisites To get started, you&rsquo;ll need a few things:
- Docker Go kind kubectl  Install Docker This is the most complicated step.">
-<meta name=twitter:domain content="https://blog.itsalwaysthe.network/posts/kubernetes-based-network-emulation/">
-<link rel=stylesheet href=//cdn.jsdelivr.net/npm/modern-normalize@1.0.0/modern-normalize.min.css>
-<link rel=stylesheet href=https://blog.itsalwaysthe.network/style.min.c960935d8d4f104620049788ddc6687727237973b8603ffd305918dd3c5e9535.css integrity="sha256-yWCTXY1PEEYgBJeI3cZodycjeXO4YD/9MFkY3TxelTU=" rel="preload stylesheet" as=style>
-</head>
-<body>
-<script>const currentTheme=window.localStorage.getItem('theme');currentTheme==="dark"?document.body.classList.toggle("theme-dark"):currentTheme=="light"&&document.body.classList.toggle("theme-light")</script>
-<header id=header>
-<div class=row>
-<div class="container has-padding nav">
-<button id=navbar-toggler class=navbar-button aria-hidden=true><svg xmlns="http://www.w3.org/2000/svg" class="ionicon" viewBox="0 0 512 512"><path d="M64 384h384v-42.67H64zm0-106.67h384v-42.66H64zM64 128v42.67h384V128z"/></svg>
-</button>
-<div class=navbar-brand>
-<a class="logo navbar-button" href=https://blog.itsalwaysthe.network/ title="It's Always the Network">
-<span>It's Always the Network</span>
-</a>
-</div>
-<nav class=navbar role=navigation>
-<ul>
-<li class="nav-bar-item active">
-<a class="nav-link navbar-button" href=/posts/ title=posts>
-<span>posts</span>
-</a>
-</li>
-<li class=nav-bar-item>
-<a class="nav-link navbar-button" href=/tags/ title=tags>
-<span>tags</span>
-</a>
-</li>
-</ul>
-</nav>
-<div class=theme-selector>
-<button class="button is-text" id=theme-selector-button title="toggle theme">
-<span class="label icon"><svg xmlns="http://www.w3.org/2000/svg" class="ionicon" viewBox="0 0 512 512"><path d="M256 32C132.29 32 32 132.29 32 256s100.29 224 224 224 224-100.29 224-224S379.71 32 256 32zM128.72 383.28A180 180 0 01256 76v360a178.82 178.82.0 01-127.28-52.72z"/></svg>
-</span>
-</button>
-</div>
-</div>
-<div class="container has-padding">
-<div class=breadcrumb>
-<ol class=breadcrumb-nav>
-<li>
-<a href=https://blog.itsalwaysthe.network/>Home</a>
-</li>
-<li>
-<a href=https://blog.itsalwaysthe.network/posts/>Posts</a>
-</li>
-<li class=active>
-<a href=https://blog.itsalwaysthe.network/posts/kubernetes-based-network-emulation/>Managing Virtual Network Labs with KNE</a>
-</li>
-</ol>
-</div>
-</div>
-</div>
-</header>
-<main id=main>
-<div class="container has-padding">
-<div class="article-card post single">
-<h1 class=title>Managing Virtual Network Labs with KNE</h1>
-<div class=post-info>
-<span><svg xmlns="http://www.w3.org/2000/svg" class="ionicon" viewBox="0 0 512 512"><path d="M32 456a24 24 0 0024 24h4e2a24 24 0 0024-24V176H32zm320-244a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm0 80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm-80-80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm0 80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm0 80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm-80-80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm0 80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm-80-80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm0 80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zM456 64h-55.92V32h-48v32H159.92V32h-48v32H56A23.8 23.8.0 0032 87.77V144h448V87.77A23.8 23.8.0 00456 64z"/></svg>
-<time datetime=2022-02-05T00:00:00Z class=date>February 05, 2022</time></span>
-<span><svg xmlns="http://www.w3.org/2000/svg" class="ionicon" viewBox="0 0 512 512"><path d="M256 48C141.13 48 48 141.13 48 256c0 114.69 93.32 208 208 208 114.86.0 208-93.14 208-208 0-114.69-93.31-208-208-208zm108 240H244a4 4 0 01-4-4V116a4 4 0 014-4h24a4 4 0 014 4v140h92a4 4 0 014 4v24a4 4 0 01-4 4z"/></svg>
-17 mins to read</span>
-<span>posts </span>
-</div>
-<article class="post-entry content">
-<p>This post will be a (very short) introduction to <a href=https://github.com/google/kne><code>kne</code></a>, a project
+ Docker Go kind kubectl  Install Docker This is the most complicated step."><meta name=twitter:domain content="https://blog.itsalwaysthe.network/posts/kubernetes-based-network-emulation/"><link rel=icon href=https://blog.itsalwaysthe.network/favicon.ico><link rel=stylesheet href=//cdn.jsdelivr.net/npm/modern-normalize@1.0.0/modern-normalize.min.css><link rel=stylesheet href=https://blog.itsalwaysthe.network/style.min.c960935d8d4f104620049788ddc6687727237973b8603ffd305918dd3c5e9535.css integrity="sha256-yWCTXY1PEEYgBJeI3cZodycjeXO4YD/9MFkY3TxelTU=" rel="preload stylesheet" as=style></head><body><script>const currentTheme=window.localStorage.getItem("theme");currentTheme==="dark"?document.body.classList.toggle("theme-dark"):currentTheme=="light"&&document.body.classList.toggle("theme-light")</script><header id=header><div class=row><div class="container has-padding nav"><button id=navbar-toggler class=navbar-button aria-hidden=true><svg xmlns="http://www.w3.org/2000/svg" class="ionicon" viewBox="0 0 512 512"><path d="M64 384h384v-42.67H64zm0-106.67h384v-42.66H64zM64 128v42.67h384V128z"/></svg></button><div class=navbar-brand><a class="logo navbar-button" href=https://blog.itsalwaysthe.network/ title="It's Always the Network"><span>It's Always the Network</span></a></div><nav class=navbar role=navigation><ul><li class="nav-bar-item active"><a class="nav-link navbar-button" href=/posts/ title=posts><span>posts</span></a></li><li class=nav-bar-item><a class="nav-link navbar-button" href=/tags/ title=tags><span>tags</span></a></li></ul></nav><div class=theme-selector><button class="button is-text" id=theme-selector-button title="toggle theme">
+<span class="label icon"><svg xmlns="http://www.w3.org/2000/svg" class="ionicon" viewBox="0 0 512 512"><path d="M256 32C132.29 32 32 132.29 32 256s100.29 224 224 224 224-100.29 224-224S379.71 32 256 32zM128.72 383.28A180 180 0 01256 76v360a178.82 178.82.0 01-127.28-52.72z"/></svg></span></button></div></div><div class="container has-padding"><div class=breadcrumb><ol class=breadcrumb-nav><li><a href=https://blog.itsalwaysthe.network/>Home</a></li><li><a href=https://blog.itsalwaysthe.network/posts/>Posts</a></li><li class=active><a href=https://blog.itsalwaysthe.network/posts/kubernetes-based-network-emulation/>Managing Virtual Network Labs with KNE</a></li></ol></div></div></div></header><main id=main><div class="container has-padding"><div class="article-card post single"><h1 class=title>Managing Virtual Network Labs with KNE</h1><div class=post-info><span><svg xmlns="http://www.w3.org/2000/svg" class="ionicon" viewBox="0 0 512 512"><path d="M32 456a24 24 0 0024 24h4e2a24 24 0 0024-24V176H32zm320-244a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm0 80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm-80-80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm0 80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm0 80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm-80-80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm0 80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm-80-80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm0 80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zM456 64h-55.92V32h-48v32H159.92V32h-48v32H56A23.8 23.8.0 0032 87.77V144h448V87.77A23.8 23.8.0 00456 64z"/></svg><time datetime=2022-02-05T00:00:00Z class=date>February 05, 2022</time></span>
+<span><svg xmlns="http://www.w3.org/2000/svg" class="ionicon" viewBox="0 0 512 512"><path d="M256 48C141.13 48 48 141.13 48 256c0 114.69 93.32 208 208 208 114.86.0 208-93.14 208-208 0-114.69-93.31-208-208-208zm108 240H244a4 4 0 01-4-4V116a4 4 0 014-4h24a4 4 0 014 4v140h92a4 4 0 014 4v24a4 4 0 01-4 4z"/></svg>17 mins to read</span>
+<span>posts</span></div><article class="post-entry content"><p>This post will be a (very short) introduction to <a href=https://github.com/google/kne><code>kne</code></a>, a project
 from Google that lets you run virtual network topologies in Kubernetes.
 I&rsquo;m writing this as the current docs are a bit lacking for anyone who
 really just wants a lab topology without necessarily understanding how
-to do things with Kubernetes.</p>
-<h1 id=prerequisites>Prerequisites</h1>
-<p>To get started, you&rsquo;ll need a few things:</p>
-<ul>
-<li><a href=https://www.docker.com/>Docker</a></li>
-<li><a href=https://go.dev/>Go</a></li>
-<li><a href=https://kind.sigs.k8s.io/><code>kind</code></a></li>
-<li><a href=https://kubernetes.io/docs/reference/kubectl/overview/><code>kubectl</code></a></li>
-</ul>
-<h2 id=install-docker>Install Docker</h2>
-<p>This is the most complicated step. The official intsallation guide from
+to do things with Kubernetes.</p><h1 id=prerequisites>Prerequisites</h1><p>To get started, you&rsquo;ll need a few things:</p><ul><li><a href=https://www.docker.com/>Docker</a></li><li><a href=https://go.dev/>Go</a></li><li><a href=https://kind.sigs.k8s.io/><code>kind</code></a></li><li><a href=https://kubernetes.io/docs/reference/kubectl/overview/><code>kubectl</code></a></li></ul><h2 id=install-docker>Install Docker</h2><p>This is the most complicated step. The official intsallation guide from
 Docker is <a href=https://docs.docker.com/engine/install/>here</a>, but if you&rsquo;re on Linux, you can use
-the install script:</p>
-<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash>$ curl -fsSL https://get.docker.com -o get-docker.sh
-$ sudo sh ./get-docker.sh
-$ sudo groupadd docker
-$ sudo usermod -aG docker $USER
-$ newgrp docker
-$ docker run hello-world
-</code></pre></div><blockquote>
-<p>The last command just runs a test image to verify that Docker was
-successfully installed.</p>
-</blockquote>
-<h2 id=install-go>Install Go</h2>
-<p>Right now, the tooling expects you to have <a href=https://go.dev/>Go</a> installed. If
+the install script:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ curl -fsSL https://get.docker.com -o get-docker.sh
+</span></span><span style=display:flex><span>$ sudo sh ./get-docker.sh
+</span></span><span style=display:flex><span>$ sudo groupadd docker
+</span></span><span style=display:flex><span>$ sudo usermod -aG docker $USER
+</span></span><span style=display:flex><span>$ newgrp docker
+</span></span><span style=display:flex><span>$ docker run hello-world
+</span></span></code></pre></div><blockquote><p>The last command just runs a test image to verify that Docker was
+successfully installed.</p></blockquote><h2 id=install-go>Install Go</h2><p>Right now, the tooling expects you to have <a href=https://go.dev/>Go</a> installed. If
 you don&rsquo;t have it already installed, you can follow the official
 guide <a href=https://go.dev/doc/install>here</a>, or if you&rsquo;re on a Linux system, you can
-run the commands below:</p>
-<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash>$ curl -LOs https://go.dev/dl/go1.17.6.linux-amd64.tar.gz
-$ sudo tar -C /usr/local -xzf go1.17.6.linux-amd64.tar.gz
-$ echo <span style=color:#e6db74>&#34;export PATH=</span>$PATH<span style=color:#e6db74>:/usr/local/go/bin&#34;</span> &gt;&gt; ~/.profile
-$ export PATH<span style=color:#f92672>=</span>$PATH:/usr/local/go/bin
-</code></pre></div><blockquote>
-<p>You might need to adjust where you place the <code>PATH</code> update based on
-your shell, but that&rsquo;s outside the scope of this article.</p>
-</blockquote>
-<h2 id=install-kind>Install <code>kind</code></h2>
-<p><a href=https://kind.sigs.k8s.io/><code>kind</code></a> is a helper binary for running Kubernetes in Docker. It
+run the commands below:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ curl -LOs https://go.dev/dl/go1.17.6.linux-amd64.tar.gz
+</span></span><span style=display:flex><span>$ sudo tar -C /usr/local -xzf go1.17.6.linux-amd64.tar.gz
+</span></span><span style=display:flex><span>$ echo <span style=color:#e6db74>&#34;export PATH=</span>$PATH<span style=color:#e6db74>:/usr/local/go/bin&#34;</span> &gt;&gt; ~/.profile
+</span></span><span style=display:flex><span>$ export PATH<span style=color:#f92672>=</span>$PATH:/usr/local/go/bin
+</span></span></code></pre></div><blockquote><p>You might need to adjust where you place the <code>PATH</code> update based on
+your shell, but that&rsquo;s outside the scope of this article.</p></blockquote><h2 id=install-kind>Install <code>kind</code></h2><p><a href=https://kind.sigs.k8s.io/><code>kind</code></a> is a helper binary for running Kubernetes in Docker. It
 is installed with Go, and doing so is straightforward! Simply run the
-following command:</p>
-<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash>$ go install sigs.k8s.io/kind@v0.11.1
-</code></pre></div><p>That&rsquo;s it!</p>
-<h2 id=install-kubectl>Install <code>kubectl</code></h2>
-<p><code>kubectl</code> is how we&rsquo;ll interact with our Kubernetes cluster and, more
+following command:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ go install sigs.k8s.io/kind@v0.11.1
+</span></span></code></pre></div><p>That&rsquo;s it!</p><h2 id=install-kubectl>Install <code>kubectl</code></h2><p><code>kubectl</code> is how we&rsquo;ll interact with our Kubernetes cluster and, more
 importantly, how we&rsquo;ll log into our routers. On Linux, you can install
-it with the following command:</p>
-<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash>$ curl -LO <span style=color:#e6db74>&#34;https://dl.k8s.io/release/</span><span style=color:#66d9ef>$(</span>curl -L -s https://dl.k8s.io/release/stable.txt<span style=color:#66d9ef>)</span><span style=color:#e6db74>/bin/linux/amd64/kubectl&#34;</span>
-$ chmod +x kubectl
-$ mv kubectl ~/.local/bin
-$ kubectl version --client
-</code></pre></div><blockquote>
-<p>The above assumes you have <code>~/.local/bin</code> somewhere in your path. If
+it with the following command:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ curl -LO <span style=color:#e6db74>&#34;https://dl.k8s.io/release/</span><span style=color:#66d9ef>$(</span>curl -L -s https://dl.k8s.io/release/stable.txt<span style=color:#66d9ef>)</span><span style=color:#e6db74>/bin/linux/amd64/kubectl&#34;</span>
+</span></span><span style=display:flex><span>$ chmod +x kubectl
+</span></span><span style=display:flex><span>$ mv kubectl ~/.local/bin
+</span></span><span style=display:flex><span>$ kubectl version --client
+</span></span></code></pre></div><blockquote><p>The above assumes you have <code>~/.local/bin</code> somewhere in your path. If
 you don&rsquo;t, simply move <code>kubectl</code> to somewhere that is in your path,
-such as <code>/usr/local/bin</code>.</p>
-</blockquote>
-<p>If you&rsquo;re not on Linux, or if you run into issues or want more a more
+such as <code>/usr/local/bin</code>.</p></blockquote><p>If you&rsquo;re not on Linux, or if you run into issues or want more a more
 detailed guide, check the
-<a href=https://kubernetes.io/docs/tasks/tools/#kubectl>official <code>kubectl</code> installation instructions</a>.</p>
-<h2 id=verify-prerequisites>Verify Prerequisites</h2>
-<p>Once you&rsquo;ve installed the prerequisites, you can run through the
-following commands to ensure they&rsquo;re functioning:</p>
-<ul>
-<li>Docker: <code>docker run hello-world</code></li>
-<li><code>go</code>: <code>go version</code></li>
-<li><code>kind</code>: <code>kind version</code></li>
-<li><code>kubectl</code>: <code>kubectl version --client</code></li>
-</ul>
-<p>All of the above commands should be successful. I&rsquo;ve run them with my
-output below as an example:</p>
-<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash>$ docker run hello-world
-Unable to find image <span style=color:#e6db74>&#39;hello-world:latest&#39;</span> locally
-latest: Pulling from library/hello-world
-2db29710123e: Pull complete
-Digest: sha256:507ecde44b8eb741278274653120c2bf793b174c06ff4eaa672b713b3263477b
-Status: Downloaded newer image <span style=color:#66d9ef>for</span> hello-world:latest
-
-Hello from Docker!
-This message shows that your installation appears to be working correctly.
-
-To generate this message, Docker took the following steps:
- 1. The Docker client contacted the Docker daemon.
- 2. The Docker daemon pulled the <span style=color:#e6db74>&#34;hello-world&#34;</span> image from the Docker Hub.
-    <span style=color:#f92672>(</span>amd64<span style=color:#f92672>)</span>
- 3. The Docker daemon created a new container from that image which runs the
-    executable that produces the output you are currently reading.
- 4. The Docker daemon streamed that output to the Docker client, which sent it
-    to your terminal.
-
-To try something more ambitious, you can run an Ubuntu container with:
- $ docker run -it ubuntu bash
-
-Share images, automate workflows, and more with a free Docker ID:
- https://hub.docker.com/
-
-For more examples and ideas, visit:
- https://docs.docker.com/get-started/
-
-$ go version
-go version go1.17.6 linux/amd64
-$ kind version
-kind v0.11.1 go1.17.6 linux/amd64
-$ kubectl version --client
-Client Version: version.Info<span style=color:#f92672>{</span>Major:<span style=color:#e6db74>&#34;1&#34;</span>, Minor:<span style=color:#e6db74>&#34;23&#34;</span>, GitVersion:<span style=color:#e6db74>&#34;v1.23.1&#34;</span>, GitCommit:<span style=color:#e6db74>&#34;86ec240af8cbd1b60bcc4c03c20da9b98005b92e&#34;</span>, GitTreeState:<span style=color:#e6db74>&#34;clean&#34;</span>, BuildDate:<span style=color:#e6db74>&#34;2021-12-16T11:41:01Z&#34;</span>, GoVersion:<span style=color:#e6db74>&#34;go1.17.5&#34;</span>, Compiler:<span style=color:#e6db74>&#34;gc&#34;</span>, Platform:<span style=color:#e6db74>&#34;linux/amd64&#34;</span><span style=color:#f92672>}</span>
-$
-</code></pre></div><h1 id=install-kne>Install <code>kne</code></h1>
-<p>Now that we have prerequisites, it&rsquo;s time to install <code>kne</code>! Again, this
-is a very straightforward process:</p>
-<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash>$ go install github.com/google/kne/kne_cli@latest
-</code></pre></div><p>This will install <code>kne_cli</code> to <code>$GOPATH/bin</code>. On my system, that&rsquo;s
+<a href=https://kubernetes.io/docs/tasks/tools/#kubectl>official <code>kubectl</code> installation instructions</a>.</p><h2 id=verify-prerequisites>Verify Prerequisites</h2><p>Once you&rsquo;ve installed the prerequisites, you can run through the
+following commands to ensure they&rsquo;re functioning:</p><ul><li>Docker: <code>docker run hello-world</code></li><li><code>go</code>: <code>go version</code></li><li><code>kind</code>: <code>kind version</code></li><li><code>kubectl</code>: <code>kubectl version --client</code></li></ul><p>All of the above commands should be successful. I&rsquo;ve run them with my
+output below as an example:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ docker run hello-world
+</span></span><span style=display:flex><span>Unable to find image <span style=color:#e6db74>&#39;hello-world:latest&#39;</span> locally
+</span></span><span style=display:flex><span>latest: Pulling from library/hello-world
+</span></span><span style=display:flex><span>2db29710123e: Pull complete
+</span></span><span style=display:flex><span>Digest: sha256:507ecde44b8eb741278274653120c2bf793b174c06ff4eaa672b713b3263477b
+</span></span><span style=display:flex><span>Status: Downloaded newer image <span style=color:#66d9ef>for</span> hello-world:latest
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Hello from Docker!
+</span></span><span style=display:flex><span>This message shows that your installation appears to be working correctly.
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>To generate this message, Docker took the following steps:
+</span></span><span style=display:flex><span> 1. The Docker client contacted the Docker daemon.
+</span></span><span style=display:flex><span> 2. The Docker daemon pulled the <span style=color:#e6db74>&#34;hello-world&#34;</span> image from the Docker Hub.
+</span></span><span style=display:flex><span>    <span style=color:#f92672>(</span>amd64<span style=color:#f92672>)</span>
+</span></span><span style=display:flex><span> 3. The Docker daemon created a new container from that image which runs the
+</span></span><span style=display:flex><span>    executable that produces the output you are currently reading.
+</span></span><span style=display:flex><span> 4. The Docker daemon streamed that output to the Docker client, which sent it
+</span></span><span style=display:flex><span>    to your terminal.
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>To try something more ambitious, you can run an Ubuntu container with:
+</span></span><span style=display:flex><span> $ docker run -it ubuntu bash
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Share images, automate workflows, and more with a free Docker ID:
+</span></span><span style=display:flex><span> https://hub.docker.com/
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>For more examples and ideas, visit:
+</span></span><span style=display:flex><span> https://docs.docker.com/get-started/
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>$ go version
+</span></span><span style=display:flex><span>go version go1.17.6 linux/amd64
+</span></span><span style=display:flex><span>$ kind version
+</span></span><span style=display:flex><span>kind v0.11.1 go1.17.6 linux/amd64
+</span></span><span style=display:flex><span>$ kubectl version --client
+</span></span><span style=display:flex><span>Client Version: version.Info<span style=color:#f92672>{</span>Major:<span style=color:#e6db74>&#34;1&#34;</span>, Minor:<span style=color:#e6db74>&#34;23&#34;</span>, GitVersion:<span style=color:#e6db74>&#34;v1.23.1&#34;</span>, GitCommit:<span style=color:#e6db74>&#34;86ec240af8cbd1b60bcc4c03c20da9b98005b92e&#34;</span>, GitTreeState:<span style=color:#e6db74>&#34;clean&#34;</span>, BuildDate:<span style=color:#e6db74>&#34;2021-12-16T11:41:01Z&#34;</span>, GoVersion:<span style=color:#e6db74>&#34;go1.17.5&#34;</span>, Compiler:<span style=color:#e6db74>&#34;gc&#34;</span>, Platform:<span style=color:#e6db74>&#34;linux/amd64&#34;</span><span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>$
+</span></span></code></pre></div><h1 id=install-kne>Install <code>kne</code></h1><p>Now that we have prerequisites, it&rsquo;s time to install <code>kne</code>! Again, this
+is a very straightforward process:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ go install github.com/google/kne/kne_cli@latest
+</span></span></code></pre></div><p>This will install <code>kne_cli</code> to <code>$GOPATH/bin</code>. On my system, that&rsquo;s
 <code>~/go/bin</code>, and I have that in my <code>$PATH</code>. If you don&rsquo;t, then you can
-either add it to your path <em>or</em> move it somewhere that is in your path.</p>
-<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=color:#75715e># Add `~/go/bin/` to your path:</span>
-$ echo <span style=color:#e6db74>&#34;export PATH=</span>$PATH<span style=color:#e6db74>:</span>$HOME<span style=color:#e6db74>/go/bin&#34;</span> &gt;&gt; ~/.profile
-$ export PATH<span style=color:#f92672>=</span>$PATH:$HOME/go/bin<span style=color:#e6db74>&#34; &gt;&gt; ~/.profile
-</span><span style=color:#e6db74>
-</span><span style=color:#e6db74># OR
-</span><span style=color:#e6db74>
-</span><span style=color:#e6db74># Move `kne_cli` to somewhere in your `PATH`, such as `~/.local/bin`:
-</span><span style=color:#e6db74></span>$<span style=color:#e6db74> mv ~/go/bin/kne_cli ~/.local/bin
-</span></code></pre></div><blockquote>
-<p>Personally, I don&rsquo;t love the binary name being <code>kne_cli</code>, so I rename
+either add it to your path <em>or</em> move it somewhere that is in your path.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#75715e># Add `~/go/bin/` to your path:</span>
+</span></span><span style=display:flex><span>$ echo <span style=color:#e6db74>&#34;export PATH=</span>$PATH<span style=color:#e6db74>:</span>$HOME<span style=color:#e6db74>/go/bin&#34;</span> &gt;&gt; ~/.profile
+</span></span><span style=display:flex><span>$ export PATH<span style=color:#f92672>=</span>$PATH:$HOME/go/bin<span style=color:#e6db74>&#34; &gt;&gt; ~/.profile
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>
+</span></span></span><span style=display:flex><span><span style=color:#e6db74># OR
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>
+</span></span></span><span style=display:flex><span><span style=color:#e6db74># Move `kne_cli` to somewhere in your `PATH`, such as `~/.local/bin`:
+</span></span></span><span style=display:flex><span><span style=color:#e6db74></span>$<span style=color:#e6db74> mv ~/go/bin/kne_cli ~/.local/bin
+</span></span></span></code></pre></div><blockquote><p>Personally, I don&rsquo;t love the binary name being <code>kne_cli</code>, so I rename
 it with <code>mv ~/go/bin/kne_cli ~/go/bin/kne</code>. However, to avoid
 confusion with the rest of the documentation and help outputs, this
-post will continue to refer to the command as <code>kne_cli</code>.</p>
-</blockquote>
-<p>Now, to verify that it&rsquo;s working:</p>
-<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash>$ kne_cli help
-Kubernetes Network Emulation CLI.  Works with meshnet to create
-layer <span style=color:#ae81ff>2</span> topology used by containers to layout networks in a k8s
-environment.
-
-Usage:
-  kne_cli <span style=color:#f92672>[</span>command<span style=color:#f92672>]</span>
-
-Available Commands:
-  create      Create Topology
-  delete      Delete Topology
-  deploy      Deploy cluster.
-  help        Help about any command
-  show        Show Topology
-  topology    Topology commands.
-
-Flags:
-  -h, --help               help <span style=color:#66d9ef>for</span> kne_cli
-      --kubecfg string     kubeconfig file <span style=color:#f92672>(</span>default <span style=color:#e6db74>&#34;/home/tyler/.kube/config&#34;</span><span style=color:#f92672>)</span>
-  -v, --verbosity string   log level <span style=color:#f92672>(</span>default <span style=color:#e6db74>&#34;info&#34;</span><span style=color:#f92672>)</span>
-
-Use <span style=color:#e6db74>&#34;kne_cli [command] --help&#34;</span> <span style=color:#66d9ef>for</span> more information about a command.
-</code></pre></div><h1 id=deploy-kne>Deploy KNE</h1>
-<p>KNE has two mechanisms for deployment: the built-in command
+post will continue to refer to the command as <code>kne_cli</code>.</p></blockquote><p>Now, to verify that it&rsquo;s working:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ kne_cli help
+</span></span><span style=display:flex><span>Kubernetes Network Emulation CLI.  Works with meshnet to create
+</span></span><span style=display:flex><span>layer <span style=color:#ae81ff>2</span> topology used by containers to layout networks in a k8s
+</span></span><span style=display:flex><span>environment.
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Usage:
+</span></span><span style=display:flex><span>  kne_cli <span style=color:#f92672>[</span>command<span style=color:#f92672>]</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Available Commands:
+</span></span><span style=display:flex><span>  create      Create Topology
+</span></span><span style=display:flex><span>  delete      Delete Topology
+</span></span><span style=display:flex><span>  deploy      Deploy cluster.
+</span></span><span style=display:flex><span>  help        Help about any command
+</span></span><span style=display:flex><span>  show        Show Topology
+</span></span><span style=display:flex><span>  topology    Topology commands.
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Flags:
+</span></span><span style=display:flex><span>  -h, --help               help <span style=color:#66d9ef>for</span> kne_cli
+</span></span><span style=display:flex><span>      --kubecfg string     kubeconfig file <span style=color:#f92672>(</span>default <span style=color:#e6db74>&#34;/home/tyler/.kube/config&#34;</span><span style=color:#f92672>)</span>
+</span></span><span style=display:flex><span>  -v, --verbosity string   log level <span style=color:#f92672>(</span>default <span style=color:#e6db74>&#34;info&#34;</span><span style=color:#f92672>)</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Use <span style=color:#e6db74>&#34;kne_cli [command] --help&#34;</span> <span style=color:#66d9ef>for</span> more information about a command.
+</span></span></code></pre></div><h1 id=deploy-kne>Deploy KNE</h1><p>KNE has two mechanisms for deployment: the built-in command
 (<code>kne_cli deploy</code>) or a list of full commands for installing to a normal
 Kubernetes cluster. We&rsquo;re going to use the <code>kne_cli deploy</code> method
 because it does everything for you, but be aware that the scalability
-may not be what you need for larger topologies or systems (like IOS-XR).</p>
-<p>Deploy KNE is straightforward: simply download the example deployment
-definition and deploy it:</p>
-<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash>$ git clone https://github.com/google/kne ~/kne
-$ cd ~/kne
-$ kne_cli deploy deploy/kne/kind.yaml
-</code></pre></div><p>Next, verify that your deployment was successful:</p>
-<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash>$ kind get clusters
-kne
-$ kubectl get nodes
-NAME                STATUS   ROLES                  AGE   VERSION
-kne-control-plane   Ready    control-plane,master   15h   v1.22.1
-</code></pre></div><h1 id=install-the-sr-linux-controller>Install the SR Linux Controller</h1>
-<p>This post uses SR Linux as the example because it&rsquo;s the lowest barrier
+may not be what you need for larger topologies or systems (like IOS-XR).</p><p>Deploy KNE is straightforward: simply download the example deployment
+definition and deploy it:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ git clone https://github.com/google/kne ~/kne
+</span></span><span style=display:flex><span>$ cd ~/kne
+</span></span><span style=display:flex><span>$ kne_cli deploy deploy/kne/kind.yaml
+</span></span></code></pre></div><p>Next, verify that your deployment was successful:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ kind get clusters
+</span></span><span style=display:flex><span>kne
+</span></span><span style=display:flex><span>$ kubectl get nodes
+</span></span><span style=display:flex><span>NAME                STATUS   ROLES                  AGE   VERSION
+</span></span><span style=display:flex><span>kne-control-plane   Ready    control-plane,master   15h   v1.22.1
+</span></span></code></pre></div><h1 id=install-the-sr-linux-controller>Install the SR Linux Controller</h1><p>This post uses SR Linux as the example because it&rsquo;s the lowest barrier
 to entry. Although KNE supports Arista cEOS and Cisco IOS-XR, neither
 of those options are freely available without going through a pay or
 registration wall. <a href=https://learn.srlinux.dev/>SR Linux</a>, on the other hand, is publicly
 available as a container image, for free, without a pay wall. So that&rsquo;s
-what we&rsquo;re going to use!</p>
-<p>In order to use SR Linux with KNE, though, we need the SR Linux
-Controller. Fortunately, installing this is also very easy!</p>
-<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash>$ kubectl apply -k https://github.com/srl-labs/srl-controller/config/default
-</code></pre></div><p>Now, make sure it&rsquo;s successfully installed:</p>
-<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash>$ kubectl get pods -n srlinux-controller
-NAME                                                    READY   STATUS    RESTARTS      AGE
-srlinux-controller-controller-manager-fb7848755-nj9tl   2/2     Running   <span style=color:#ae81ff>2</span> <span style=color:#f92672>(</span>71m ago<span style=color:#f92672>)</span>   15h
-</code></pre></div><blockquote>
-<p>It might take a few minutes. You can either re-run the command until
+what we&rsquo;re going to use!</p><p>In order to use SR Linux with KNE, though, we need the SR Linux
+Controller. Fortunately, installing this is also very easy!</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ kubectl apply -k https://github.com/srl-labs/srl-controller/config/default
+</span></span></code></pre></div><p>Now, make sure it&rsquo;s successfully installed:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ kubectl get pods -n srlinux-controller
+</span></span><span style=display:flex><span>NAME                                                    READY   STATUS    RESTARTS      AGE
+</span></span><span style=display:flex><span>srlinux-controller-controller-manager-fb7848755-nj9tl   2/2     Running   <span style=color:#ae81ff>2</span> <span style=color:#f92672>(</span>71m ago<span style=color:#f92672>)</span>   15h
+</span></span></code></pre></div><blockquote><p>It might take a few minutes. You can either re-run the command until
 you see <code>2/2</code> under <code>READY</code> and <code>Running</code> under <code>STATUS</code>, or you can
 add <code>-w</code> to the command to refresh whenever the status of the pod
-changes (i.e., <code>kubectl get pods -n srlinux-controller -w</code>).</p>
-</blockquote>
-<h1 id=deploy-a-sample-topology>Deploy a Sample Topology</h1>
-<p>KNE comes with some sample topologies. We can now deploy one of these
+changes (i.e., <code>kubectl get pods -n srlinux-controller -w</code>).</p></blockquote><h1 id=deploy-a-sample-topology>Deploy a Sample Topology</h1><p>KNE comes with some sample topologies. We can now deploy one of these
 with SR Linux. The topology is a simple 3-node topology, and we&rsquo;ll
-later configure basic IPv6 addresses and LLDP to verify operation.</p>
-<p>Deploying the topology is (again) very simple:</p>
-<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash>$ cd ~/kne
-$ kne_cli create examples/srlinux/3node-srl.pbtxt
-</code></pre></div><p>This will create the SR Linux virtual routers in the <code>3node-srlinux</code>
+later configure basic IPv6 addresses and LLDP to verify operation.</p><p>Deploying the topology is (again) very simple:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ cd ~/kne
+</span></span><span style=display:flex><span>$ kne_cli create examples/srlinux/3node-srl.pbtxt
+</span></span></code></pre></div><p>This will create the SR Linux virtual routers in the <code>3node-srlinux</code>
 namespace. In another terminal window, we can watch the status of those
-pods in a similar manner as we did for watching the controller:</p>
-<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash>$ kubectl get pods -n 3node-srlinux -w
-</code></pre></div><p>Once everything is running, we can log into our routers!</p>
-<h1 id=log-in-and-configure-interfaces>Log In and Configure Interfaces</h1>
-<p>Okay, this is the part where things <em>might</em> stop being so easy. SR
+pods in a similar manner as we did for watching the controller:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ kubectl get pods -n 3node-srlinux -w
+</span></span></code></pre></div><p>Once everything is running, we can log into our routers!</p><h1 id=log-in-and-configure-interfaces>Log In and Configure Interfaces</h1><p>Okay, this is the part where things <em>might</em> stop being so easy. SR
 Linux isn&rsquo;t like IOS, NX-OS, EOS, IOS-XR, or Junos. If you&rsquo;re
 unfamiliar with SR Linux, it&rsquo;s very similar to the old Alcatel-Lucent
 TiMOS. And if you&rsquo;re not familiar with that, this might be a bit of
 an interesting configuration experience. It is a <em>fantastic</em> model,
 though, and has always been one of my favorite systems to manage and
 configure because of its hierarchical nature. Everything
-<em>just makes sense</em> to me. Anyway, enough about that, let&rsquo;s log in!</p>
-<p>To log in, we use <code>kubectl</code>!</p>
-<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash>$ kubectl exec -it r1 -n 3node-srlinux -- sr_cli
-Defaulted container <span style=color:#e6db74>&#34;r1&#34;</span> out of: r1, init-r1 <span style=color:#f92672>(</span>init<span style=color:#f92672>)</span>
-Using configuration file<span style=color:#f92672>(</span>s<span style=color:#f92672>)</span>: <span style=color:#f92672>[</span><span style=color:#e6db74>&#39;/etc/opt/srlinux/srlinux.rc&#39;</span><span style=color:#f92672>]</span>
-Welcome to the srlinux CLI.
-Type <span style=color:#e6db74>&#39;help&#39;</span> <span style=color:#f92672>(</span>and press &lt;ENTER&gt;<span style=color:#f92672>)</span> <span style=color:#66d9ef>if</span> you need any help using this.
---<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> running <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
-A:r1#
-</code></pre></div><p>To log out, the command is simply <code>quit</code>.</p>
-<h2 id=sr-linux-basics>SR Linux Basics</h2>
-<p>The most important thing to know is that SR Linux has a concept of
+<em>just makes sense</em> to me. Anyway, enough about that, let&rsquo;s log in!</p><p>To log in, we use <code>kubectl</code>!</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ kubectl exec -it r1 -n 3node-srlinux -- sr_cli
+</span></span><span style=display:flex><span>Defaulted container <span style=color:#e6db74>&#34;r1&#34;</span> out of: r1, init-r1 <span style=color:#f92672>(</span>init<span style=color:#f92672>)</span>
+</span></span><span style=display:flex><span>Using configuration file<span style=color:#f92672>(</span>s<span style=color:#f92672>)</span>: <span style=color:#f92672>[</span><span style=color:#e6db74>&#39;/etc/opt/srlinux/srlinux.rc&#39;</span><span style=color:#f92672>]</span>
+</span></span><span style=display:flex><span>Welcome to the srlinux CLI.
+</span></span><span style=display:flex><span>Type <span style=color:#e6db74>&#39;help&#39;</span> <span style=color:#f92672>(</span>and press &lt;ENTER&gt;<span style=color:#f92672>)</span> <span style=color:#66d9ef>if</span> you need any help using this.
+</span></span><span style=display:flex><span>--<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> running <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
+</span></span><span style=display:flex><span>A:r1#
+</span></span></code></pre></div><p>To log out, the command is simply <code>quit</code>.</p><h2 id=sr-linux-basics>SR Linux Basics</h2><p>The most important thing to know is that SR Linux has a concept of
 contexts. When you first login, you&rsquo;re in the <code>running</code> context, which
 is the active <code>running</code> configuration. If you want to make a
 configuration change, you need to enter the <code>candidate</code> context. This
@@ -326,440 +170,356 @@ two-stage configuration style will be somewhat familiar to IOS-XR and
 Junos operators, except instead of typing <code>configure</code>, you type
 <code>enter candidate</code>. To view the configuration, you can simply type
 <code>info</code>. For a specific level of hierarchy, you can add that to the end
-of the <code>info</code> command, e.g., <code>info interface mgmt0</code>:</p>
-<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash>A:r1# info interface mgmt0
-    interface mgmt0 <span style=color:#f92672>{</span>
-        admin-state enable
-        subinterface <span style=color:#ae81ff>0</span> <span style=color:#f92672>{</span>
-            admin-state enable
-            ipv4 <span style=color:#f92672>{</span>
-                dhcp-client <span style=color:#f92672>{</span>
-                <span style=color:#f92672>}</span>
-            <span style=color:#f92672>}</span>
-            ipv6 <span style=color:#f92672>{</span>
-                dhcp-client <span style=color:#f92672>{</span>
-                <span style=color:#f92672>}</span>
-            <span style=color:#f92672>}</span>
-        <span style=color:#f92672>}</span>
-    <span style=color:#f92672>}</span>
---<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> running <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
-A:r1#
-</code></pre></div><p>The style looks similar to Junos, including hierarchy, curly braces, and
-mandatory subinterfaces (<code>unit</code> from Junos) for logical configuration.</p>
-<p>There are also <code>show</code> commands and even a <code>show</code> context.</p>
-<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash>--<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> running <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
-A:r1# show interface brief
-+---------------------+-----------------------------------+-----------------------------------+-----------------------------------+-----------------------------------+
-|        Port         |            Admin State            |            Oper State             |               Speed               |               Type                |
-+<span style=color:#f92672>=====================</span>+<span style=color:#f92672>===================================</span>+<span style=color:#f92672>===================================</span>+<span style=color:#f92672>===================================</span>+<span style=color:#f92672>===================================</span>+
-| ethernet-1/1        | disable                           | down                              | 100G                              |                                   |
-| ethernet-1/2        | disable                           | down                              | 100G                              |                                   |
-| ethernet-1/3        | disable                           | down                              | 100G                              |                                   |
-
-&lt;SNIP&gt;
-</code></pre></div><h2 id=configure-an-ipv6-address>Configure an IPv6 Address</h2>
-<p>As mentioned above, we need to enter the <code>candidate</code> context to make
+of the <code>info</code> command, e.g., <code>info interface mgmt0</code>:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>A:r1# info interface mgmt0
+</span></span><span style=display:flex><span>    interface mgmt0 <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>        admin-state enable
+</span></span><span style=display:flex><span>        subinterface <span style=color:#ae81ff>0</span> <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>            admin-state enable
+</span></span><span style=display:flex><span>            ipv4 <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>                dhcp-client <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>                <span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>            <span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>            ipv6 <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>                dhcp-client <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>                <span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>            <span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>        <span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>    <span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>--<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> running <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
+</span></span><span style=display:flex><span>A:r1#
+</span></span></code></pre></div><p>The style looks similar to Junos, including hierarchy, curly braces, and
+mandatory subinterfaces (<code>unit</code> from Junos) for logical configuration.</p><p>There are also <code>show</code> commands and even a <code>show</code> context.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>--<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> running <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
+</span></span><span style=display:flex><span>A:r1# show interface brief
+</span></span><span style=display:flex><span>+---------------------+-----------------------------------+-----------------------------------+-----------------------------------+-----------------------------------+
+</span></span><span style=display:flex><span>|        Port         |            Admin State            |            Oper State             |               Speed               |               Type                |
+</span></span><span style=display:flex><span>+<span style=color:#f92672>=====================</span>+<span style=color:#f92672>===================================</span>+<span style=color:#f92672>===================================</span>+<span style=color:#f92672>===================================</span>+<span style=color:#f92672>===================================</span>+
+</span></span><span style=display:flex><span>| ethernet-1/1        | disable                           | down                              | 100G                              |                                   |
+</span></span><span style=display:flex><span>| ethernet-1/2        | disable                           | down                              | 100G                              |                                   |
+</span></span><span style=display:flex><span>| ethernet-1/3        | disable                           | down                              | 100G                              |                                   |
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>&lt;SNIP&gt;
+</span></span></code></pre></div><h2 id=configure-an-ipv6-address>Configure an IPv6 Address</h2><p>As mentioned above, we need to enter the <code>candidate</code> context to make
 configuration changes, so let&rsquo;s do that. Use the following commands to
-configure an IPv6 address on <code>ethernet-1/1</code> on <code>r1</code>:</p>
-<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash>enter candidate
-interface ethernet-1/1
-subinterface <span style=color:#ae81ff>0</span>
-ipv6 address 2001:db8:1::1/64
-/
-diff
-commit now
-</code></pre></div><p>Example output:</p>
-<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash>A:r1# enter candidate
---<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> candidate shared default <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
-A:r1# interface ethernet-1/1
---<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> * candidate shared default <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span> interface ethernet-1/1 <span style=color:#f92672>]</span>--
-A:r1# subinterface <span style=color:#ae81ff>0</span>
---<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> * candidate shared default <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span> interface ethernet-1/1 subinterface <span style=color:#ae81ff>0</span> <span style=color:#f92672>]</span>--
-A:r1# ipv6 address 2001:db8:1::1/64
---<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> * candidate shared default <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span> interface ethernet-1/1 subinterface <span style=color:#ae81ff>0</span> ipv6 address 2001:db8:1::1/64 <span style=color:#f92672>]</span>--
-A:r1# /
---<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> * candidate shared default <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
-A:r1# diff
-+     interface ethernet-1/1 <span style=color:#f92672>{</span>
-+         subinterface <span style=color:#ae81ff>0</span> <span style=color:#f92672>{</span>
-+             ipv6 <span style=color:#f92672>{</span>
-+                 address 2001:db8:1::1/64 <span style=color:#f92672>{</span>
-+                 <span style=color:#f92672>}</span>
-+             <span style=color:#f92672>}</span>
-+         <span style=color:#f92672>}</span>
-+     <span style=color:#f92672>}</span>
---<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> * candidate shared default <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
-A:r1# commit now
-All changes have been committed. Leaving candidate mode.
---<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> + running <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
-A:r1# info interface ethernet-1/1
-    interface ethernet-1/1 <span style=color:#f92672>{</span>
-        admin-state enable
-        subinterface <span style=color:#ae81ff>0</span> <span style=color:#f92672>{</span>
-            ipv6 <span style=color:#f92672>{</span>
-                address 2001:db8:1::1/64 <span style=color:#f92672>{</span>
-                <span style=color:#f92672>}</span>
-            <span style=color:#f92672>}</span>
-        <span style=color:#f92672>}</span>
-    <span style=color:#f92672>}</span>
---<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> + running <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
-A:r1#
-</code></pre></div><p>We can use <code>show interface ethernet-1/1</code> to get the operational status:</p>
-<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash>--<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> + running <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
-A:r1# show interface ethernet-1/1
-<span style=color:#f92672>=======================================================================================================================================================================</span>
-ethernet-1/1 is up, speed 100G, type None
-  ethernet-1/1.0 is up
-    Network-instance:
-    Encapsulation   : null
-    Type            : routed
-    IPv6 addr    : 2001:db8:1::1/64 <span style=color:#f92672>(</span>static, unknown<span style=color:#f92672>)</span>
-    IPv6 addr    : fe80::74:2eff:feff:0/64 <span style=color:#f92672>(</span>link-layer, unknown<span style=color:#f92672>)</span>
------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-<span style=color:#f92672>=======================================================================================================================================================================</span>
---<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> + running <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
-A:r1#
-</code></pre></div><p>Now, let&rsquo;s do the same on <code>r2</code>. First, use <code>quit</code> to logout of <code>r1</code>,
+configure an IPv6 address on <code>ethernet-1/1</code> on <code>r1</code>:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>enter candidate
+</span></span><span style=display:flex><span>interface ethernet-1/1
+</span></span><span style=display:flex><span>subinterface <span style=color:#ae81ff>0</span>
+</span></span><span style=display:flex><span>ipv6 address 2001:db8:1::1/64
+</span></span><span style=display:flex><span>/
+</span></span><span style=display:flex><span>diff
+</span></span><span style=display:flex><span>commit now
+</span></span></code></pre></div><p>Example output:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>A:r1# enter candidate
+</span></span><span style=display:flex><span>--<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> candidate shared default <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
+</span></span><span style=display:flex><span>A:r1# interface ethernet-1/1
+</span></span><span style=display:flex><span>--<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> * candidate shared default <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span> interface ethernet-1/1 <span style=color:#f92672>]</span>--
+</span></span><span style=display:flex><span>A:r1# subinterface <span style=color:#ae81ff>0</span>
+</span></span><span style=display:flex><span>--<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> * candidate shared default <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span> interface ethernet-1/1 subinterface <span style=color:#ae81ff>0</span> <span style=color:#f92672>]</span>--
+</span></span><span style=display:flex><span>A:r1# ipv6 address 2001:db8:1::1/64
+</span></span><span style=display:flex><span>--<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> * candidate shared default <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span> interface ethernet-1/1 subinterface <span style=color:#ae81ff>0</span> ipv6 address 2001:db8:1::1/64 <span style=color:#f92672>]</span>--
+</span></span><span style=display:flex><span>A:r1# /
+</span></span><span style=display:flex><span>--<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> * candidate shared default <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
+</span></span><span style=display:flex><span>A:r1# diff
+</span></span><span style=display:flex><span>+     interface ethernet-1/1 <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>+         subinterface <span style=color:#ae81ff>0</span> <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>+             ipv6 <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>+                 address 2001:db8:1::1/64 <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>+                 <span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>+             <span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>+         <span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>+     <span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>--<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> * candidate shared default <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
+</span></span><span style=display:flex><span>A:r1# commit now
+</span></span><span style=display:flex><span>All changes have been committed. Leaving candidate mode.
+</span></span><span style=display:flex><span>--<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> + running <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
+</span></span><span style=display:flex><span>A:r1# info interface ethernet-1/1
+</span></span><span style=display:flex><span>    interface ethernet-1/1 <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>        admin-state enable
+</span></span><span style=display:flex><span>        subinterface <span style=color:#ae81ff>0</span> <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>            ipv6 <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>                address 2001:db8:1::1/64 <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>                <span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>            <span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>        <span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>    <span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>--<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> + running <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
+</span></span><span style=display:flex><span>A:r1#
+</span></span></code></pre></div><p>We can use <code>show interface ethernet-1/1</code> to get the operational status:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>--<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> + running <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
+</span></span><span style=display:flex><span>A:r1# show interface ethernet-1/1
+</span></span><span style=display:flex><span><span style=color:#f92672>=======================================================================================================================================================================</span>
+</span></span><span style=display:flex><span>ethernet-1/1 is up, speed 100G, type None
+</span></span><span style=display:flex><span>  ethernet-1/1.0 is up
+</span></span><span style=display:flex><span>    Network-instance:
+</span></span><span style=display:flex><span>    Encapsulation   : null
+</span></span><span style=display:flex><span>    Type            : routed
+</span></span><span style=display:flex><span>    IPv6 addr    : 2001:db8:1::1/64 <span style=color:#f92672>(</span>static, unknown<span style=color:#f92672>)</span>
+</span></span><span style=display:flex><span>    IPv6 addr    : fe80::74:2eff:feff:0/64 <span style=color:#f92672>(</span>link-layer, unknown<span style=color:#f92672>)</span>
+</span></span><span style=display:flex><span>-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+</span></span><span style=display:flex><span><span style=color:#f92672>=======================================================================================================================================================================</span>
+</span></span><span style=display:flex><span>--<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> + running <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
+</span></span><span style=display:flex><span>A:r1#
+</span></span></code></pre></div><p>Now, let&rsquo;s do the same on <code>r2</code>. First, use <code>quit</code> to logout of <code>r1</code>,
 then use <code>kubectl</code> to log into <code>r2</code> and configure its <code>ethernet-1/1</code>
-interface:</p>
-<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash>kubectl exec -it r2 -n 3node-srlinux -- sr_cli
-enter candidate
-interface ethernet-1/1 subinterface <span style=color:#ae81ff>0</span> ipv6 address 2001:db8:1::2/64
-/
-diff
-commit now
-</code></pre></div><p>Example output:</p>
-<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash>$ kubectl exec -it r2 -n 3node-srlinux -- sr_cli
-Defaulted container <span style=color:#e6db74>&#34;r2&#34;</span> out of: r2, init-r2 <span style=color:#f92672>(</span>init<span style=color:#f92672>)</span>
-Using configuration file<span style=color:#f92672>(</span>s<span style=color:#f92672>)</span>: <span style=color:#f92672>[</span><span style=color:#e6db74>&#39;/etc/opt/srlinux/srlinux.rc&#39;</span><span style=color:#f92672>]</span>
-Welcome to the srlinux CLI.
-Type <span style=color:#e6db74>&#39;help&#39;</span> <span style=color:#f92672>(</span>and press &lt;ENTER&gt;<span style=color:#f92672>)</span> <span style=color:#66d9ef>if</span> you need any help using this.
---<span style=color:#f92672>{</span> running <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
-A:r2# enter candidate
---<span style=color:#f92672>{</span> candidate shared default <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
-A:r2# interface ethernet-1/1 subinterface <span style=color:#ae81ff>0</span> ipv6 address 2001:db8:1::2/64
---<span style=color:#f92672>{</span> * candidate shared default <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span> interface ethernet-1/1 subinterface <span style=color:#ae81ff>0</span> ipv6 address 2001:db8:1::2/64 <span style=color:#f92672>]</span>--
-A:r2# /
---<span style=color:#f92672>{</span> * candidate shared default <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
-A:r2# diff
-+     interface ethernet-1/1 <span style=color:#f92672>{</span>
-+         subinterface <span style=color:#ae81ff>0</span> <span style=color:#f92672>{</span>
-+             ipv6 <span style=color:#f92672>{</span>
-+                 address 2001:db8:1::2/64 <span style=color:#f92672>{</span>
-+                 <span style=color:#f92672>}</span>
-+             <span style=color:#f92672>}</span>
-+         <span style=color:#f92672>}</span>
-+     <span style=color:#f92672>}</span>
---<span style=color:#f92672>{</span> * candidate shared default <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
-A:r2# commit now
-All changes have been committed. Leaving candidate mode.
---<span style=color:#f92672>{</span> + running <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
-A:r2#
-</code></pre></div><p>Now that we&rsquo;ve configured our IPv6 addresses, we should be able to use
+interface:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>kubectl exec -it r2 -n 3node-srlinux -- sr_cli
+</span></span><span style=display:flex><span>enter candidate
+</span></span><span style=display:flex><span>interface ethernet-1/1 subinterface <span style=color:#ae81ff>0</span> ipv6 address 2001:db8:1::2/64
+</span></span><span style=display:flex><span>/
+</span></span><span style=display:flex><span>diff
+</span></span><span style=display:flex><span>commit now
+</span></span></code></pre></div><p>Example output:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ kubectl exec -it r2 -n 3node-srlinux -- sr_cli
+</span></span><span style=display:flex><span>Defaulted container <span style=color:#e6db74>&#34;r2&#34;</span> out of: r2, init-r2 <span style=color:#f92672>(</span>init<span style=color:#f92672>)</span>
+</span></span><span style=display:flex><span>Using configuration file<span style=color:#f92672>(</span>s<span style=color:#f92672>)</span>: <span style=color:#f92672>[</span><span style=color:#e6db74>&#39;/etc/opt/srlinux/srlinux.rc&#39;</span><span style=color:#f92672>]</span>
+</span></span><span style=display:flex><span>Welcome to the srlinux CLI.
+</span></span><span style=display:flex><span>Type <span style=color:#e6db74>&#39;help&#39;</span> <span style=color:#f92672>(</span>and press &lt;ENTER&gt;<span style=color:#f92672>)</span> <span style=color:#66d9ef>if</span> you need any help using this.
+</span></span><span style=display:flex><span>--<span style=color:#f92672>{</span> running <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
+</span></span><span style=display:flex><span>A:r2# enter candidate
+</span></span><span style=display:flex><span>--<span style=color:#f92672>{</span> candidate shared default <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
+</span></span><span style=display:flex><span>A:r2# interface ethernet-1/1 subinterface <span style=color:#ae81ff>0</span> ipv6 address 2001:db8:1::2/64
+</span></span><span style=display:flex><span>--<span style=color:#f92672>{</span> * candidate shared default <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span> interface ethernet-1/1 subinterface <span style=color:#ae81ff>0</span> ipv6 address 2001:db8:1::2/64 <span style=color:#f92672>]</span>--
+</span></span><span style=display:flex><span>A:r2# /
+</span></span><span style=display:flex><span>--<span style=color:#f92672>{</span> * candidate shared default <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
+</span></span><span style=display:flex><span>A:r2# diff
+</span></span><span style=display:flex><span>+     interface ethernet-1/1 <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>+         subinterface <span style=color:#ae81ff>0</span> <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>+             ipv6 <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>+                 address 2001:db8:1::2/64 <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>+                 <span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>+             <span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>+         <span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>+     <span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>--<span style=color:#f92672>{</span> * candidate shared default <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
+</span></span><span style=display:flex><span>A:r2# commit now
+</span></span><span style=display:flex><span>All changes have been committed. Leaving candidate mode.
+</span></span><span style=display:flex><span>--<span style=color:#f92672>{</span> + running <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
+</span></span><span style=display:flex><span>A:r2#
+</span></span></code></pre></div><p>Now that we&rsquo;ve configured our IPv6 addresses, we should be able to use
 our interfaces, right? Wrong! Unlike other vendors operating systems,
 SR Linux does not place interfaces or configurations into a default
 routing instance. We have to do that ourselves. So, on each of our
 routers, we need to create an instance and add our interface to it. If
 you&rsquo;re familiar with <code>routing-instance</code> on Junos, this is similar &ndash;
 just one extra step to get something into an instance. I&rsquo;ll name a new
-instance called <code>main</code>, but you can also use the <code>default</code> instance:</p>
-<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash>enter candidate
-network-instance main
-interface ethernet-1/1.0
-/
-diff
-commit now
-</code></pre></div><p>Example output for both routers, including using <code>kubectl</code> to log in:</p>
-<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash>$ kubectl exec -it r1 -n 3node-srlinux -- sr_cli
-Defaulted container <span style=color:#e6db74>&#34;r1&#34;</span> out of: r1, init-r1 <span style=color:#f92672>(</span>init<span style=color:#f92672>)</span>
-Using configuration file<span style=color:#f92672>(</span>s<span style=color:#f92672>)</span>: <span style=color:#f92672>[</span><span style=color:#e6db74>&#39;/etc/opt/srlinux/srlinux.rc&#39;</span><span style=color:#f92672>]</span>
-Welcome to the srlinux CLI.
-Type <span style=color:#e6db74>&#39;help&#39;</span> <span style=color:#f92672>(</span>and press &lt;ENTER&gt;<span style=color:#f92672>)</span> <span style=color:#66d9ef>if</span> you need any help using this.
---<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> + running <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
-A:r1# enter candidate
---<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> + candidate shared default <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
-A:r1# network-instance main
---<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> +* candidate shared default <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span> network-instance main <span style=color:#f92672>]</span>--
-A:r1# interface ethernet-1/1.0
---<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> +* candidate shared default <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span> network-instance main interface ethernet-1/1.0 <span style=color:#f92672>]</span>--
-A:r1# /
---<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> +* candidate shared default <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
-A:r1# diff
-+     network-instance main <span style=color:#f92672>{</span>
-+         interface ethernet-1/1.0 <span style=color:#f92672>{</span>
-+         <span style=color:#f92672>}</span>
-+     <span style=color:#f92672>}</span>
---<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> +* candidate shared default <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
-A:r1# commit now
-All changes have been committed. Leaving candidate mode.
---<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> + running <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
-A:r1# quit
-
-$ kubectl exec -it r2 -n 3node-srlinux -- sr_cli
-Defaulted container <span style=color:#e6db74>&#34;r2&#34;</span> out of: r2, init-r2 <span style=color:#f92672>(</span>init<span style=color:#f92672>)</span>
-Using configuration file<span style=color:#f92672>(</span>s<span style=color:#f92672>)</span>: <span style=color:#f92672>[</span><span style=color:#e6db74>&#39;/etc/opt/srlinux/srlinux.rc&#39;</span><span style=color:#f92672>]</span>
-Welcome to the srlinux CLI.
-Type <span style=color:#e6db74>&#39;help&#39;</span> <span style=color:#f92672>(</span>and press &lt;ENTER&gt;<span style=color:#f92672>)</span> <span style=color:#66d9ef>if</span> you need any help using this.
---<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> + running <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
-A:r2# enter candidate
---<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> + candidate shared default <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
-A:r2# network-instance main interface ethernet-1/1.0
---<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> +* candidate shared default <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span> network-instance main interface ethernet-1/1.0 <span style=color:#f92672>]</span>--
-A:r2# /
---<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> +* candidate shared default <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
-A:r2# diff
-+     network-instance main <span style=color:#f92672>{</span>
-+         interface ethernet-1/1.0 <span style=color:#f92672>{</span>
-+         <span style=color:#f92672>}</span>
-+     <span style=color:#f92672>}</span>
---<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> +* candidate shared default <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
-A:r2# commit now
-All changes have been committed. Leaving candidate mode.
---<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> + running <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
-</code></pre></div><p>Now, let&rsquo;s verify that we can ping from one host to another!</p>
-<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash>$ kubectl exec -it r1 -n 3node-srlinux -- sr_cli
-A:r1# ping6 2001:db8:1::2 network-instance main -c <span style=color:#ae81ff>3</span>
-Using network instance main
-PING 2001:db8:1::2<span style=color:#f92672>(</span>2001:db8:1::2<span style=color:#f92672>)</span> <span style=color:#ae81ff>56</span> data bytes
-<span style=color:#ae81ff>64</span> bytes from 2001:db8:1::2: icmp_seq<span style=color:#f92672>=</span><span style=color:#ae81ff>1</span> ttl<span style=color:#f92672>=</span><span style=color:#ae81ff>64</span> time<span style=color:#f92672>=</span>37.4 ms
-<span style=color:#ae81ff>64</span> bytes from 2001:db8:1::2: icmp_seq<span style=color:#f92672>=</span><span style=color:#ae81ff>2</span> ttl<span style=color:#f92672>=</span><span style=color:#ae81ff>64</span> time<span style=color:#f92672>=</span>34.9 ms
-<span style=color:#ae81ff>64</span> bytes from 2001:db8:1::2: icmp_seq<span style=color:#f92672>=</span><span style=color:#ae81ff>3</span> ttl<span style=color:#f92672>=</span><span style=color:#ae81ff>64</span> time<span style=color:#f92672>=</span>33.8 ms
-
---- 2001:db8:1::2 ping statistics ---
-<span style=color:#ae81ff>3</span> packets transmitted, <span style=color:#ae81ff>3</span> received, 0% packet loss, time 2004ms
-rtt min/avg/max/mdev <span style=color:#f92672>=</span> 33.801/35.384/37.444/1.525 ms
---<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> + running <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
-A:r1#
-</code></pre></div><h2 id=configure-lldp>Configure LLDP</h2>
-<p>With SR Linux, we don&rsquo;t get LLDP enabled everywhere. Now that we have
+instance called <code>main</code>, but you can also use the <code>default</code> instance:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>enter candidate
+</span></span><span style=display:flex><span>network-instance main
+</span></span><span style=display:flex><span>interface ethernet-1/1.0
+</span></span><span style=display:flex><span>/
+</span></span><span style=display:flex><span>diff
+</span></span><span style=display:flex><span>commit now
+</span></span></code></pre></div><p>Example output for both routers, including using <code>kubectl</code> to log in:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ kubectl exec -it r1 -n 3node-srlinux -- sr_cli
+</span></span><span style=display:flex><span>Defaulted container <span style=color:#e6db74>&#34;r1&#34;</span> out of: r1, init-r1 <span style=color:#f92672>(</span>init<span style=color:#f92672>)</span>
+</span></span><span style=display:flex><span>Using configuration file<span style=color:#f92672>(</span>s<span style=color:#f92672>)</span>: <span style=color:#f92672>[</span><span style=color:#e6db74>&#39;/etc/opt/srlinux/srlinux.rc&#39;</span><span style=color:#f92672>]</span>
+</span></span><span style=display:flex><span>Welcome to the srlinux CLI.
+</span></span><span style=display:flex><span>Type <span style=color:#e6db74>&#39;help&#39;</span> <span style=color:#f92672>(</span>and press &lt;ENTER&gt;<span style=color:#f92672>)</span> <span style=color:#66d9ef>if</span> you need any help using this.
+</span></span><span style=display:flex><span>--<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> + running <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
+</span></span><span style=display:flex><span>A:r1# enter candidate
+</span></span><span style=display:flex><span>--<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> + candidate shared default <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
+</span></span><span style=display:flex><span>A:r1# network-instance main
+</span></span><span style=display:flex><span>--<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> +* candidate shared default <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span> network-instance main <span style=color:#f92672>]</span>--
+</span></span><span style=display:flex><span>A:r1# interface ethernet-1/1.0
+</span></span><span style=display:flex><span>--<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> +* candidate shared default <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span> network-instance main interface ethernet-1/1.0 <span style=color:#f92672>]</span>--
+</span></span><span style=display:flex><span>A:r1# /
+</span></span><span style=display:flex><span>--<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> +* candidate shared default <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
+</span></span><span style=display:flex><span>A:r1# diff
+</span></span><span style=display:flex><span>+     network-instance main <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>+         interface ethernet-1/1.0 <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>+         <span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>+     <span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>--<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> +* candidate shared default <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
+</span></span><span style=display:flex><span>A:r1# commit now
+</span></span><span style=display:flex><span>All changes have been committed. Leaving candidate mode.
+</span></span><span style=display:flex><span>--<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> + running <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
+</span></span><span style=display:flex><span>A:r1# quit
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>$ kubectl exec -it r2 -n 3node-srlinux -- sr_cli
+</span></span><span style=display:flex><span>Defaulted container <span style=color:#e6db74>&#34;r2&#34;</span> out of: r2, init-r2 <span style=color:#f92672>(</span>init<span style=color:#f92672>)</span>
+</span></span><span style=display:flex><span>Using configuration file<span style=color:#f92672>(</span>s<span style=color:#f92672>)</span>: <span style=color:#f92672>[</span><span style=color:#e6db74>&#39;/etc/opt/srlinux/srlinux.rc&#39;</span><span style=color:#f92672>]</span>
+</span></span><span style=display:flex><span>Welcome to the srlinux CLI.
+</span></span><span style=display:flex><span>Type <span style=color:#e6db74>&#39;help&#39;</span> <span style=color:#f92672>(</span>and press &lt;ENTER&gt;<span style=color:#f92672>)</span> <span style=color:#66d9ef>if</span> you need any help using this.
+</span></span><span style=display:flex><span>--<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> + running <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
+</span></span><span style=display:flex><span>A:r2# enter candidate
+</span></span><span style=display:flex><span>--<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> + candidate shared default <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
+</span></span><span style=display:flex><span>A:r2# network-instance main interface ethernet-1/1.0
+</span></span><span style=display:flex><span>--<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> +* candidate shared default <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span> network-instance main interface ethernet-1/1.0 <span style=color:#f92672>]</span>--
+</span></span><span style=display:flex><span>A:r2# /
+</span></span><span style=display:flex><span>--<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> +* candidate shared default <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
+</span></span><span style=display:flex><span>A:r2# diff
+</span></span><span style=display:flex><span>+     network-instance main <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>+         interface ethernet-1/1.0 <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>+         <span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>+     <span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>--<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> +* candidate shared default <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
+</span></span><span style=display:flex><span>A:r2# commit now
+</span></span><span style=display:flex><span>All changes have been committed. Leaving candidate mode.
+</span></span><span style=display:flex><span>--<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> + running <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
+</span></span></code></pre></div><p>Now, let&rsquo;s verify that we can ping from one host to another!</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ kubectl exec -it r1 -n 3node-srlinux -- sr_cli
+</span></span><span style=display:flex><span>A:r1# ping6 2001:db8:1::2 network-instance main -c <span style=color:#ae81ff>3</span>
+</span></span><span style=display:flex><span>Using network instance main
+</span></span><span style=display:flex><span>PING 2001:db8:1::2<span style=color:#f92672>(</span>2001:db8:1::2<span style=color:#f92672>)</span> <span style=color:#ae81ff>56</span> data bytes
+</span></span><span style=display:flex><span><span style=color:#ae81ff>64</span> bytes from 2001:db8:1::2: icmp_seq<span style=color:#f92672>=</span><span style=color:#ae81ff>1</span> ttl<span style=color:#f92672>=</span><span style=color:#ae81ff>64</span> time<span style=color:#f92672>=</span>37.4 ms
+</span></span><span style=display:flex><span><span style=color:#ae81ff>64</span> bytes from 2001:db8:1::2: icmp_seq<span style=color:#f92672>=</span><span style=color:#ae81ff>2</span> ttl<span style=color:#f92672>=</span><span style=color:#ae81ff>64</span> time<span style=color:#f92672>=</span>34.9 ms
+</span></span><span style=display:flex><span><span style=color:#ae81ff>64</span> bytes from 2001:db8:1::2: icmp_seq<span style=color:#f92672>=</span><span style=color:#ae81ff>3</span> ttl<span style=color:#f92672>=</span><span style=color:#ae81ff>64</span> time<span style=color:#f92672>=</span>33.8 ms
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>--- 2001:db8:1::2 ping statistics ---
+</span></span><span style=display:flex><span><span style=color:#ae81ff>3</span> packets transmitted, <span style=color:#ae81ff>3</span> received, 0% packet loss, time 2004ms
+</span></span><span style=display:flex><span>rtt min/avg/max/mdev <span style=color:#f92672>=</span> 33.801/35.384/37.444/1.525 ms
+</span></span><span style=display:flex><span>--<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> + running <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
+</span></span><span style=display:flex><span>A:r1#
+</span></span></code></pre></div><h2 id=configure-lldp>Configure LLDP</h2><p>With SR Linux, we don&rsquo;t get LLDP enabled everywhere. Now that we have
 a little more comfort with SR Linux, let&rsquo;s enable LLDP on our interfaces
-and verify its operation. On both routers:</p>
-<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash>enter candidate
-system lldp interface ethernet-1/1
-/
-diff
-commit now
-</code></pre></div><p>Example outputs, including the usage of <code>kubectl</code>, for both routers:</p>
-<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash>$ kubectl exec -it r1 -n 3node-srlinux -- sr_cli
-Defaulted container <span style=color:#e6db74>&#34;r1&#34;</span> out of: r1, init-r1 <span style=color:#f92672>(</span>init<span style=color:#f92672>)</span>
-Using configuration file<span style=color:#f92672>(</span>s<span style=color:#f92672>)</span>: <span style=color:#f92672>[</span><span style=color:#e6db74>&#39;/etc/opt/srlinux/srlinux.rc&#39;</span><span style=color:#f92672>]</span>
-Welcome to the srlinux CLI.
-Type <span style=color:#e6db74>&#39;help&#39;</span> <span style=color:#f92672>(</span>and press &lt;ENTER&gt;<span style=color:#f92672>)</span> <span style=color:#66d9ef>if</span> you need any help using this.
---<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> + running <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
-A:r1# enter candidate
---<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> + candidate shared default <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
-A:r1# system lldp interface ethernet-1/1
---<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> +* candidate shared default <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span> system lldp interface ethernet-1/1 <span style=color:#f92672>]</span>--
-A:r1# /
---<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> +* candidate shared default <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
-A:r1# diff
-      system <span style=color:#f92672>{</span>
-+         lldp <span style=color:#f92672>{</span>
-+             interface ethernet-1/1 <span style=color:#f92672>{</span>
-+             <span style=color:#f92672>}</span>
-+         <span style=color:#f92672>}</span>
-      <span style=color:#f92672>}</span>
---<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> +* candidate shared default <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
-A:r1# commit now
-All changes have been committed. Leaving candidate mode.
---<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> + running <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
-A:r1# quit
-
-$ kubectl exec -it r2 -n 3node-srlinux -- sr_cli
-Defaulted container <span style=color:#e6db74>&#34;r2&#34;</span> out of: r2, init-r2 <span style=color:#f92672>(</span>init<span style=color:#f92672>)</span>
-Using configuration file<span style=color:#f92672>(</span>s<span style=color:#f92672>)</span>: <span style=color:#f92672>[</span><span style=color:#e6db74>&#39;/etc/opt/srlinux/srlinux.rc&#39;</span><span style=color:#f92672>]</span>
-Welcome to the srlinux CLI.
-Type <span style=color:#e6db74>&#39;help&#39;</span> <span style=color:#f92672>(</span>and press &lt;ENTER&gt;<span style=color:#f92672>)</span> <span style=color:#66d9ef>if</span> you need any help using this.
---<span style=color:#f92672>{</span> + running <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
-A:r2# enter candidate
---<span style=color:#f92672>{</span> + candidate shared default <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
-A:r2# system lldp interface ethernet-1/1
---<span style=color:#f92672>{</span> +* candidate shared default <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span> system lldp interface ethernet-1/1 <span style=color:#f92672>]</span>--
-A:r2# /
---<span style=color:#f92672>{</span> +* candidate shared default <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
-A:r2# diff
-      system <span style=color:#f92672>{</span>
-+         lldp <span style=color:#f92672>{</span>
-+             interface ethernet-1/1 <span style=color:#f92672>{</span>
-+             <span style=color:#f92672>}</span>
-+         <span style=color:#f92672>}</span>
-      <span style=color:#f92672>}</span>
---<span style=color:#f92672>{</span> +* candidate shared default <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
-A:r2# commit now
-All changes have been committed. Leaving candidate mode.
---<span style=color:#f92672>{</span> + running <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
-A:r2# quit
-</code></pre></div><p>Finally, let&rsquo;s verify with the <code>show system lldp neighbor</code> command:</p>
-<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash>$ k exec -it r2 -n 3node-srlinux -- sr_cli
-Defaulted container <span style=color:#e6db74>&#34;r2&#34;</span> out of: r2, init-r2 <span style=color:#f92672>(</span>init<span style=color:#f92672>)</span>
-Using configuration file<span style=color:#f92672>(</span>s<span style=color:#f92672>)</span>: <span style=color:#f92672>[</span><span style=color:#e6db74>&#39;/etc/opt/srlinux/srlinux.rc&#39;</span><span style=color:#f92672>]</span>
-Welcome to the srlinux CLI.
-Type <span style=color:#e6db74>&#39;help&#39;</span> <span style=color:#f92672>(</span>and press &lt;ENTER&gt;<span style=color:#f92672>)</span> <span style=color:#66d9ef>if</span> you need any help using this.
---<span style=color:#f92672>{</span> + running <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
-A:r2# show system lldp neighbor
-  +--------------+-------------------+---------------------+---------------------+---------------------+--------------------+---------------+-------------+-----------+
-  |     Name     |     Neighbor      |   Neighbor System   | Neighbor Chassis ID |   Neighbor First    |   Neighbor Last    | Neighbor Port | BGP GroupId | BGP Peers |
-  |              |                   |        Name         |                     |       Message       |       Update       |               |             |           |
-  +<span style=color:#f92672>==============</span>+<span style=color:#f92672>===================</span>+<span style=color:#f92672>=====================</span>+<span style=color:#f92672>=====================</span>+<span style=color:#f92672>=====================</span>+<span style=color:#f92672>====================</span>+<span style=color:#f92672>===============</span>+<span style=color:#f92672>=============</span>+<span style=color:#f92672>===========</span>+
-  | ethernet-1/1 | 02:74:2E:FF:00:00 | r1                  | 02:74:2E:FF:00:00   | a minute ago        | <span style=color:#ae81ff>21</span> seconds ago     | ethernet-1/1  |             |           |
-  +--------------+-------------------+---------------------+---------------------+---------------------+--------------------+---------------+-------------+-----------+
---<span style=color:#f92672>{</span> + running <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
-A:r2#
-</code></pre></div><h2 id=final-thoughts-on-sr-linux>Final Thoughts on SR Linux</h2>
-<p>Look, I&rsquo;ve been a fan of Nokia&rsquo;s routers since before they were Nokia.
+and verify its operation. On both routers:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>enter candidate
+</span></span><span style=display:flex><span>system lldp interface ethernet-1/1
+</span></span><span style=display:flex><span>/
+</span></span><span style=display:flex><span>diff
+</span></span><span style=display:flex><span>commit now
+</span></span></code></pre></div><p>Example outputs, including the usage of <code>kubectl</code>, for both routers:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ kubectl exec -it r1 -n 3node-srlinux -- sr_cli
+</span></span><span style=display:flex><span>Defaulted container <span style=color:#e6db74>&#34;r1&#34;</span> out of: r1, init-r1 <span style=color:#f92672>(</span>init<span style=color:#f92672>)</span>
+</span></span><span style=display:flex><span>Using configuration file<span style=color:#f92672>(</span>s<span style=color:#f92672>)</span>: <span style=color:#f92672>[</span><span style=color:#e6db74>&#39;/etc/opt/srlinux/srlinux.rc&#39;</span><span style=color:#f92672>]</span>
+</span></span><span style=display:flex><span>Welcome to the srlinux CLI.
+</span></span><span style=display:flex><span>Type <span style=color:#e6db74>&#39;help&#39;</span> <span style=color:#f92672>(</span>and press &lt;ENTER&gt;<span style=color:#f92672>)</span> <span style=color:#66d9ef>if</span> you need any help using this.
+</span></span><span style=display:flex><span>--<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> + running <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
+</span></span><span style=display:flex><span>A:r1# enter candidate
+</span></span><span style=display:flex><span>--<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> + candidate shared default <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
+</span></span><span style=display:flex><span>A:r1# system lldp interface ethernet-1/1
+</span></span><span style=display:flex><span>--<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> +* candidate shared default <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span> system lldp interface ethernet-1/1 <span style=color:#f92672>]</span>--
+</span></span><span style=display:flex><span>A:r1# /
+</span></span><span style=display:flex><span>--<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> +* candidate shared default <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
+</span></span><span style=display:flex><span>A:r1# diff
+</span></span><span style=display:flex><span>      system <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>+         lldp <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>+             interface ethernet-1/1 <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>+             <span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>+         <span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>      <span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>--<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> +* candidate shared default <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
+</span></span><span style=display:flex><span>A:r1# commit now
+</span></span><span style=display:flex><span>All changes have been committed. Leaving candidate mode.
+</span></span><span style=display:flex><span>--<span style=color:#f92672>{</span> <span style=color:#f92672>[</span>FACTORY<span style=color:#f92672>]</span> + running <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
+</span></span><span style=display:flex><span>A:r1# quit
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>$ kubectl exec -it r2 -n 3node-srlinux -- sr_cli
+</span></span><span style=display:flex><span>Defaulted container <span style=color:#e6db74>&#34;r2&#34;</span> out of: r2, init-r2 <span style=color:#f92672>(</span>init<span style=color:#f92672>)</span>
+</span></span><span style=display:flex><span>Using configuration file<span style=color:#f92672>(</span>s<span style=color:#f92672>)</span>: <span style=color:#f92672>[</span><span style=color:#e6db74>&#39;/etc/opt/srlinux/srlinux.rc&#39;</span><span style=color:#f92672>]</span>
+</span></span><span style=display:flex><span>Welcome to the srlinux CLI.
+</span></span><span style=display:flex><span>Type <span style=color:#e6db74>&#39;help&#39;</span> <span style=color:#f92672>(</span>and press &lt;ENTER&gt;<span style=color:#f92672>)</span> <span style=color:#66d9ef>if</span> you need any help using this.
+</span></span><span style=display:flex><span>--<span style=color:#f92672>{</span> + running <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
+</span></span><span style=display:flex><span>A:r2# enter candidate
+</span></span><span style=display:flex><span>--<span style=color:#f92672>{</span> + candidate shared default <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
+</span></span><span style=display:flex><span>A:r2# system lldp interface ethernet-1/1
+</span></span><span style=display:flex><span>--<span style=color:#f92672>{</span> +* candidate shared default <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span> system lldp interface ethernet-1/1 <span style=color:#f92672>]</span>--
+</span></span><span style=display:flex><span>A:r2# /
+</span></span><span style=display:flex><span>--<span style=color:#f92672>{</span> +* candidate shared default <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
+</span></span><span style=display:flex><span>A:r2# diff
+</span></span><span style=display:flex><span>      system <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>+         lldp <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>+             interface ethernet-1/1 <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>+             <span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>+         <span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>      <span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>--<span style=color:#f92672>{</span> +* candidate shared default <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
+</span></span><span style=display:flex><span>A:r2# commit now
+</span></span><span style=display:flex><span>All changes have been committed. Leaving candidate mode.
+</span></span><span style=display:flex><span>--<span style=color:#f92672>{</span> + running <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
+</span></span><span style=display:flex><span>A:r2# quit
+</span></span></code></pre></div><p>Finally, let&rsquo;s verify with the <code>show system lldp neighbor</code> command:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ k exec -it r2 -n 3node-srlinux -- sr_cli
+</span></span><span style=display:flex><span>Defaulted container <span style=color:#e6db74>&#34;r2&#34;</span> out of: r2, init-r2 <span style=color:#f92672>(</span>init<span style=color:#f92672>)</span>
+</span></span><span style=display:flex><span>Using configuration file<span style=color:#f92672>(</span>s<span style=color:#f92672>)</span>: <span style=color:#f92672>[</span><span style=color:#e6db74>&#39;/etc/opt/srlinux/srlinux.rc&#39;</span><span style=color:#f92672>]</span>
+</span></span><span style=display:flex><span>Welcome to the srlinux CLI.
+</span></span><span style=display:flex><span>Type <span style=color:#e6db74>&#39;help&#39;</span> <span style=color:#f92672>(</span>and press &lt;ENTER&gt;<span style=color:#f92672>)</span> <span style=color:#66d9ef>if</span> you need any help using this.
+</span></span><span style=display:flex><span>--<span style=color:#f92672>{</span> + running <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
+</span></span><span style=display:flex><span>A:r2# show system lldp neighbor
+</span></span><span style=display:flex><span>  +--------------+-------------------+---------------------+---------------------+---------------------+--------------------+---------------+-------------+-----------+
+</span></span><span style=display:flex><span>  |     Name     |     Neighbor      |   Neighbor System   | Neighbor Chassis ID |   Neighbor First    |   Neighbor Last    | Neighbor Port | BGP GroupId | BGP Peers |
+</span></span><span style=display:flex><span>  |              |                   |        Name         |                     |       Message       |       Update       |               |             |           |
+</span></span><span style=display:flex><span>  +<span style=color:#f92672>==============</span>+<span style=color:#f92672>===================</span>+<span style=color:#f92672>=====================</span>+<span style=color:#f92672>=====================</span>+<span style=color:#f92672>=====================</span>+<span style=color:#f92672>====================</span>+<span style=color:#f92672>===============</span>+<span style=color:#f92672>=============</span>+<span style=color:#f92672>===========</span>+
+</span></span><span style=display:flex><span>  | ethernet-1/1 | 02:74:2E:FF:00:00 | r1                  | 02:74:2E:FF:00:00   | a minute ago        | <span style=color:#ae81ff>21</span> seconds ago     | ethernet-1/1  |             |           |
+</span></span><span style=display:flex><span>  +--------------+-------------------+---------------------+---------------------+---------------------+--------------------+---------------+-------------+-----------+
+</span></span><span style=display:flex><span>--<span style=color:#f92672>{</span> + running <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
+</span></span><span style=display:flex><span>A:r2#
+</span></span></code></pre></div><h2 id=final-thoughts-on-sr-linux>Final Thoughts on SR Linux</h2><p>Look, I&rsquo;ve been a fan of Nokia&rsquo;s routers since before they were Nokia.
 I previously worked on them when they were Alcatel-Lucent running TiMOS.
 They were the most stable devices I had ever used, and I gotta say, the
 improvements that are in SR Linux make the OS even better than it was.
 There&rsquo;s a huge range of help available in the CLI. You can even get
 some really useful information on arguments, like when configuring IPv6,
-you might notice the following if you use <code>?</code>:</p>
-<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash>Local commands:
-  primary*          One of the IPv6 prefixes assigned to the subinterface can be explicitly configured as primary by setting this leaf to true. This designates the
-                    associated IPv6 address as a primary IPv6 address of the subinterface. By default, the numerically lowest value IPv6 address is selected as the
-                    primary address.
-</code></pre></div><p>That&rsquo;s not something I looked up in their docs. It&rsquo;s available directly
+you might notice the following if you use <code>?</code>:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>Local commands:
+</span></span><span style=display:flex><span>  primary*          One of the IPv6 prefixes assigned to the subinterface can be explicitly configured as primary by setting this leaf to true. This designates the
+</span></span><span style=display:flex><span>                    associated IPv6 address as a primary IPv6 address of the subinterface. By default, the numerically lowest value IPv6 address is selected as the
+</span></span><span style=display:flex><span>                    primary address.
+</span></span></code></pre></div><p>That&rsquo;s not something I looked up in their docs. It&rsquo;s available directly
 from the CLI. This is how the network operator experience should be.
 Oh, and if you don&rsquo;t know where to find or configure something, have a
-look at the <code>tree</code> command:</p>
-<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash>A:r2# tree /system lldp
-lldp
-+-- admin-state
-+-- hello-timer
-+-- hold-multiplier
-+-- trace-options
-+-- bgp-auto-discovery
-|   +-- admin-state
-|   +-- group-id
-|   +-- network-instance
-+-- management-address
-|   +-- type
-+-- interface
-    +-- admin-state
-    +-- bgp-auto-discovery
-        +-- admin-state
-        +-- group-id
-        +-- peering-address
---<span style=color:#f92672>{</span> + running <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
-A:r2#
-</code></pre></div><p>So now you know everything that can be configured under <code>/system/lldp</code>.
+look at the <code>tree</code> command:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>A:r2# tree /system lldp
+</span></span><span style=display:flex><span>lldp
+</span></span><span style=display:flex><span>+-- admin-state
+</span></span><span style=display:flex><span>+-- hello-timer
+</span></span><span style=display:flex><span>+-- hold-multiplier
+</span></span><span style=display:flex><span>+-- trace-options
+</span></span><span style=display:flex><span>+-- bgp-auto-discovery
+</span></span><span style=display:flex><span>|   +-- admin-state
+</span></span><span style=display:flex><span>|   +-- group-id
+</span></span><span style=display:flex><span>|   +-- network-instance
+</span></span><span style=display:flex><span>+-- management-address
+</span></span><span style=display:flex><span>|   +-- type
+</span></span><span style=display:flex><span>+-- interface
+</span></span><span style=display:flex><span>    +-- admin-state
+</span></span><span style=display:flex><span>    +-- bgp-auto-discovery
+</span></span><span style=display:flex><span>        +-- admin-state
+</span></span><span style=display:flex><span>        +-- group-id
+</span></span><span style=display:flex><span>        +-- peering-address
+</span></span><span style=display:flex><span>--<span style=color:#f92672>{</span> + running <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
+</span></span><span style=display:flex><span>A:r2#
+</span></span></code></pre></div><p>So now you know everything that can be configured under <code>/system/lldp</code>.
 Want to know specifics about one of those items? Just use <code>?</code> after the
-element:</p>
-<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash>--<span style=color:#f92672>{</span> + running <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
-A:r2# system lldp hello-timer ?
-
-usage: hello-timer
-
-System level hello timer <span style=color:#66d9ef>for</span> the LLDP protocol
-
-<span style=color:#f92672>[</span>number64, range 0..18446744073709551615, units seconds, default 30<span style=color:#f92672>]</span>
-
-Output modifier commands:
-  <span style=color:#75715e>#                 Comment out the rest of the line</span>
-  &gt;                 Redirect output to a file
-  &gt;&gt;                Append output to a file
-  |                 Forward output to the next command
-
---<span style=color:#f92672>{</span> + running <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
-A:r2#
-</code></pre></div><p>How is this not just the gold standard of all network operating systems?</p>
-<h1 id=final-thoughts>Final Thoughts</h1>
-<p>KNE is a quick, easy, low-barrier way to create a virtual network lab.
+element:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>--<span style=color:#f92672>{</span> + running <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
+</span></span><span style=display:flex><span>A:r2# system lldp hello-timer ?
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>usage: hello-timer
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>System level hello timer <span style=color:#66d9ef>for</span> the LLDP protocol
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#f92672>[</span>number64, range 0..18446744073709551615, units seconds, default 30<span style=color:#f92672>]</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Output modifier commands:
+</span></span><span style=display:flex><span>  <span style=color:#75715e>#                 Comment out the rest of the line</span>
+</span></span><span style=display:flex><span>  &gt;                 Redirect output to a file
+</span></span><span style=display:flex><span>  &gt;&gt;                Append output to a file
+</span></span><span style=display:flex><span>  |                 Forward output to the next command
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>--<span style=color:#f92672>{</span> + running <span style=color:#f92672>}</span>--<span style=color:#f92672>[</span>  <span style=color:#f92672>]</span>--
+</span></span><span style=display:flex><span>A:r2#
+</span></span></code></pre></div><p>How is this not just the gold standard of all network operating systems?</p><h1 id=final-thoughts>Final Thoughts</h1><p>KNE is a quick, easy, low-barrier way to create a virtual network lab.
 SR Linux does everything right and makes their images available
 publicly. It&rsquo;s a match made in heaven, honestly, and every vendor
 hiding their containers behind a pay or registration wall should feel
-shame. Lots and lots of shame.</p>
-<p>The possibilities here are damn near endless: integration tests, logic
+shame. Lots and lots of shame.</p><p>The possibilities here are damn near endless: integration tests, logic
 validation, quick lab mockups, massive scalability in network labs
 without the annoying complexity of OpenStack or VIRL or trying to figure
-out how to do multi-node networking with Vagrant and KVM.</p>
-<p>I&rsquo;m a fan. I want every vendor NOS to have a public container and
+out how to do multi-node networking with Vagrant and KVM.</p><p>I&rsquo;m a fan. I want every vendor NOS to have a public container and
 integration with KNE. I want my entire network and my development
 pipeline to be tightly integrated, easy, and flexible. It took me 30
 minutes to setup a single KNE node with SR Linux, using IPv4 for all of
 the Kubernetes networking, and configure working IPv6 interfaces and
-LLDP between the routers.</p>
-<p>Was it something as complex as EVPN? No, but if you&rsquo;re looking for that,
+LLDP between the routers.</p><p>Was it something as complex as EVPN? No, but if you&rsquo;re looking for that,
 there&rsquo;s an <a href=https://learn.srlinux.dev/tutorials/l2evpn/fabric/#leaf-spine-interfaces>SR Linux guide</a> that uses 3 nodes to create an
 EVPN fabric. You&rsquo;ve already got three nodes if you&rsquo;ve made it through
 this &ndash; just go through the EVPN guide, changing interfaces according to
-the map below:</p>
-<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash>links: <span style=color:#f92672>{</span>
-    a_node: <span style=color:#e6db74>&#34;r1&#34;</span>
-    a_int: <span style=color:#e6db74>&#34;e1-1&#34;</span>
-    z_node: <span style=color:#e6db74>&#34;r2&#34;</span>
-    z_int: <span style=color:#e6db74>&#34;e1-1&#34;</span>
-<span style=color:#f92672>}</span>
-links: <span style=color:#f92672>{</span>
-    a_node: <span style=color:#e6db74>&#34;r1&#34;</span>
-    a_int: <span style=color:#e6db74>&#34;e1-2&#34;</span>
-    z_node: <span style=color:#e6db74>&#34;r3&#34;</span>
-    z_int: <span style=color:#e6db74>&#34;e1-1&#34;</span>
-<span style=color:#f92672>}</span>
-links: <span style=color:#f92672>{</span>
-    a_node: <span style=color:#e6db74>&#34;r2&#34;</span>
-    a_int: <span style=color:#e6db74>&#34;e1-2&#34;</span>
-    z_node: <span style=color:#e6db74>&#34;r3&#34;</span>
-    z_int: <span style=color:#e6db74>&#34;e1-2&#34;</span>
-<span style=color:#f92672>}</span>
-</code></pre></div><p>If you want to try this with cEOS or IOS-XR, you&rsquo;ve gotta jump through
+the map below:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>links: <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>    a_node: <span style=color:#e6db74>&#34;r1&#34;</span>
+</span></span><span style=display:flex><span>    a_int: <span style=color:#e6db74>&#34;e1-1&#34;</span>
+</span></span><span style=display:flex><span>    z_node: <span style=color:#e6db74>&#34;r2&#34;</span>
+</span></span><span style=display:flex><span>    z_int: <span style=color:#e6db74>&#34;e1-1&#34;</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>links: <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>    a_node: <span style=color:#e6db74>&#34;r1&#34;</span>
+</span></span><span style=display:flex><span>    a_int: <span style=color:#e6db74>&#34;e1-2&#34;</span>
+</span></span><span style=display:flex><span>    z_node: <span style=color:#e6db74>&#34;r3&#34;</span>
+</span></span><span style=display:flex><span>    z_int: <span style=color:#e6db74>&#34;e1-1&#34;</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>links: <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>    a_node: <span style=color:#e6db74>&#34;r2&#34;</span>
+</span></span><span style=display:flex><span>    a_int: <span style=color:#e6db74>&#34;e1-2&#34;</span>
+</span></span><span style=display:flex><span>    z_node: <span style=color:#e6db74>&#34;r3&#34;</span>
+</span></span><span style=display:flex><span>    z_int: <span style=color:#e6db74>&#34;e1-2&#34;</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>}</span>
+</span></span></code></pre></div><p>If you want to try this with cEOS or IOS-XR, you&rsquo;ve gotta jump through
 more hoops. I won&rsquo;t cover that here. But maybe we should just pressure
-our vendors to follow Nokia&rsquo;s model.</p>
-</article>
-</div>
-<div class="meta article-card">
-<div class=row>
-<span class=label><svg xmlns="http://www.w3.org/2000/svg" class="ionicon" viewBox="0 0 512 512"><path d="M32 456a24 24 0 0024 24h4e2a24 24 0 0024-24V176H32zm320-244a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm0 80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm-80-80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm0 80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm0 80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm-80-80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm0 80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm-80-80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm0 80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zM456 64h-55.92V32h-48v32H159.92V32h-48v32H56A23.8 23.8.0 0032 87.77V144h448V87.77A23.8 23.8.0 00456 64z"/></svg>
-Published At</span><time>2022-02-05 00:00 UTC</time>
-</div>
-<div class=row>
-<span class=label><svg xmlns="http://www.w3.org/2000/svg" class="ionicon" viewBox="0 0 512 512"><path d="M288 16 0 304l176 176 288-288V16zm80 128a32 32 0 1132-32 32 32 0 01-32 32z"/><path d="M480 64v144L216.9 471.1 242 496l270-272V64h-32z"/></svg>
-Tagged with</span>
-<ul class=tags>
-<li class=hashed-tag><a href=https://blog.itsalwaysthe.network/tags/kubernetes>kubernetes</a></li>
-<li class=hashed-tag><a href=https://blog.itsalwaysthe.network/tags/kne>kne</a></li>
-<li class=hashed-tag><a href=https://blog.itsalwaysthe.network/tags/srlinux>srlinux</a></li>
-</ul>
-</div>
-<div class="row social-share">
-<span class=label><svg xmlns="http://www.w3.org/2000/svg" class="ionicon" viewBox="0 0 512 512"><path d="M272 176v161h-32V176H92a12 12 0 00-12 12v280a12 12 0 0012 12h328a12 12 0 0012-12V188a12 12 0 00-12-12zm0-83.37 64 64L358.63 134 256 31.37 153.37 134 176 156.63l64-64V176h32V92.63z"/></svg>
-Share with</span>
-<a target=_blank title="share to reddit" rel="noopener noreferrer" aria-label="share Managing Virtual Network Labs with KNE on reddit" href="https://reddit.com/submit?url=https%3a%2f%2fblog.itsalwaysthe.network%2fposts%2fkubernetes-based-network-emulation%2f&title=Managing%20Virtual%20Network%20Labs%20with%20KNE"><svg xmlns="http://www.w3.org/2000/svg" class="ionicon" viewBox="0 0 512 512" fill="currentcolor" stroke="currentcolor" stroke-width="10"><path d="M324 256a36 36 0 1036 36 36 36 0 00-36-36z"/><circle cx="188" cy="292" r="36" transform="rotate(-22.5 187.997 291.992)"/><path d="M496 253.77c0-31.19-25.14-56.56-56-56.56a55.72 55.72.0 00-35.61 12.86c-35-23.77-80.78-38.32-129.65-41.27l22-79 66.41 13.2c1.9 26.48 24 47.49 50.65 47.49 28 0 50.78-23 50.78-51.21S441 48 413 48c-19.53.0-36.31 11.19-44.85 28.77l-90-17.89-31.1 109.52-4.63.13c-50.63 2.21-98.34 16.93-134.77 41.53A55.38 55.38.0 0072 197.21c-30.89.0-56 25.37-56 56.56a56.43 56.43.0 0028.11 49.06 98.65 98.65.0 00-.89 13.34c.11 39.74 22.49 77 63 105C146.36 448.77 199.51 464 256 464s109.76-15.23 149.83-42.89c40.53-28 62.85-65.27 62.85-105.06a109.32 109.32.0 00-.84-13.3A56.32 56.32.0 00496 253.77zM414 75a24 24 0 11-24 24 24 24 0 0124-24zM42.72 253.77a29.6 29.6.0 0129.42-29.71 29 29 0 0113.62 3.43c-15.5 14.41-26.93 30.41-34.07 47.68a30.23 30.23.0 01-8.97-21.4zM390.82 399c-35.74 24.59-83.6 38.14-134.77 38.14S157 423.61 121.29 399c-33-22.79-51.24-52.26-51.24-83A78.5 78.5.0 0175 288.72c5.68-15.74 16.16-30.48 31.15-43.79a155.17 155.17.0 0114.76-11.53l.3-.21.24-.17c35.72-24.52 83.52-38 134.61-38s98.9 13.51 134.62 38l.23.17.34.25A156.57 156.57.0 01406 244.92c15 13.32 25.48 28.05 31.16 43.81a85.44 85.44.0 014.31 17.67 77.29 77.29.0 01.6 9.65c-.01 30.72-18.21 60.19-51.25 82.95zm69.6-123.92c-7.13-17.28-18.56-33.29-34.07-47.72A29.09 29.09.0 01440 224a29.59 29.59.0 0129.41 29.71 30.07 30.07.0 01-8.99 21.39z"/><path d="M323.23 362.22c-.25.25-25.56 26.07-67.15 26.27-42-.2-66.28-25.23-67.31-26.27a4.14 4.14.0 00-5.83.0l-13.7 13.47a4.15 4.15.0 000 5.89c3.4 3.4 34.7 34.23 86.78 34.45 51.94-.22 83.38-31.05 86.78-34.45a4.16 4.16.0 000-5.9l-13.71-13.47a4.13 4.13.0 00-5.81.0z"/></svg>
-</a>
-<a target=_blank title="share to twitter" rel="noopener noreferrer" aria-label="share Managing Virtual Network Labs with KNE on twitter" href="https://twitter.com/intent/tweet/?text=Managing%20Virtual%20Network%20Labs%20with%20KNE&url=https%3a%2f%2fblog.itsalwaysthe.network%2fposts%2fkubernetes-based-network-emulation%2f&hashtags=kubernetes%2ckne%2csrlinux"><svg class="ionicon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="fill:none" stroke="currentcolor" stroke-width="2"><path d="M23 3a10.9 10.9.0 01-3.14 1.53 4.48 4.48.0 00-7.86 3v1A10.66 10.66.0 013 4s-4 9 5 13a11.64 11.64.0 01-7 2c9 5 20 0 20-11.5a4.5 4.5.0 00-.08-.83A7.72 7.72.0 0023 3z"/></svg>
-</a>
-<a target=_blank title="share to facebook" rel="noopener noreferrer" aria-label="share Managing Virtual Network Labs with KNE on facebook" href="https://facebook.com/sharer/sharer.php?u=https%3a%2f%2fblog.itsalwaysthe.network%2fposts%2fkubernetes-based-network-emulation%2f"><svg xmlns="http://www.w3.org/2000/svg" class="ionicon" viewBox="0 0 24 24" style="fill:none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-facebook"><path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/></svg>
-</a>
-</div>
-</div>
-</div>
-</main>
-<footer id=footer>
-<div class="container has-padding is-flex">
-<ul class=links>
-<li>
-<a rel=nofollow target=_blank href=https://twitter.com/supertylerc title=Twitter>Twitter</a>
-</li>
-<li>
-<a class="nav-link navbar-button" href=https://blog.itsalwaysthe.network/index.xml type=application/rss+xml>RSS</a>
-</li>
-<li>
-<a rel=nofollow target=_blank href=https://github.com/wayjam/hugo-theme-fluency title="using Hugo theme fluency">
-Theme Fluency
-</a>
-</li>
-<li>
-<a rel=nofollow target=_blank href=https://gohugo.io title="Built with hugo">Built with Hugo</a>
-</li>
-</ul>
-<div class=copyright>
-&copy; 2022 It's Always the Network
-</div>
-</div>
-</footer>
-<script>window.FluencyCopyIcon='\n\n\n\n\n\n\n\u003csvg xmlns=\u0027http://www.w3.org/2000/svg\u0027 class=\u0027ionicon\u0027 viewBox=\u00270 0 512 512\u0027\u003e\u003crect x=\u0027128\u0027 y=\u0027128\u0027 width=\u0027336\u0027 height=\u0027336\u0027 rx=\u002757\u0027 ry=\u002757\u0027 stroke-linejoin=\u0027round\u0027 class=\u0027ionicon-fill-none ionicon-stroke-width\u0027/\u003e\u003cpath d=\u0027M383.5 128l.5-24a56.16 56.16 0 00-56-56H112a64.19 64.19 0 00-64 64v216a56.16 56.16 0 0056 56h24\u0027 stroke-linecap=\u0027round\u0027 stroke-linejoin=\u0027round\u0027 class=\u0027ionicon-fill-none ionicon-stroke-width\u0027/\u003e\u003c/svg\u003e\n\n\n\n\n\n\n\n\n\n\n'</script>
-<script defer src=https://blog.itsalwaysthe.network/js/main.min.7685c4d03abca7fd02a772a2e64c7a8aa3a7031024bbab70a17975e8928cb004.js integrity="sha256-doXE0Dq8p/0Cp3Ki5kx6iqOnAxAku6twoXl16JKMsAQ=" crossorigin=anonymous async></script>
-<noscript>
-<style type=text/css>#theme-selector-button{display:none}</style>
-</noscript>
-</body>
-</html>
+our vendors to follow Nokia&rsquo;s model.</p></article></div><div class="meta article-card"><div class=row><span class=label><svg xmlns="http://www.w3.org/2000/svg" class="ionicon" viewBox="0 0 512 512"><path d="M32 456a24 24 0 0024 24h4e2a24 24 0 0024-24V176H32zm320-244a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm0 80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm-80-80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm0 80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm0 80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm-80-80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm0 80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm-80-80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm0 80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zM456 64h-55.92V32h-48v32H159.92V32h-48v32H56A23.8 23.8.0 0032 87.77V144h448V87.77A23.8 23.8.0 00456 64z"/></svg>Published At</span><time>2022-02-05 00:00 UTC</time></div><div class=row><span class=label><svg xmlns="http://www.w3.org/2000/svg" class="ionicon" viewBox="0 0 512 512"><path d="M288 16 0 304l176 176 288-288V16zm80 128a32 32 0 1132-32 32 32 0 01-32 32z"/><path d="M480 64v144L216.9 471.1 242 496l270-272V64h-32z"/></svg>Tagged with</span><ul class=tags><li class=hashed-tag><a href=https://blog.itsalwaysthe.network/tags/kubernetes>kubernetes</a></li><li class=hashed-tag><a href=https://blog.itsalwaysthe.network/tags/kne>kne</a></li><li class=hashed-tag><a href=https://blog.itsalwaysthe.network/tags/srlinux>srlinux</a></li></ul></div><div class="row social-share"><span class=label><svg xmlns="http://www.w3.org/2000/svg" class="ionicon" viewBox="0 0 512 512"><path d="M272 176v161h-32V176H92a12 12 0 00-12 12v280a12 12 0 0012 12h328a12 12 0 0012-12V188a12 12 0 00-12-12zm0-83.37 64 64L358.63 134 256 31.37 153.37 134 176 156.63l64-64V176h32V92.63z"/></svg>Share with</span>
+<a target=_blank title="share to reddit" rel="noopener noreferrer" aria-label="share Managing Virtual Network Labs with KNE on reddit" href="https://reddit.com/submit?url=https%3a%2f%2fblog.itsalwaysthe.network%2fposts%2fkubernetes-based-network-emulation%2f&title=Managing%20Virtual%20Network%20Labs%20with%20KNE"><svg xmlns="http://www.w3.org/2000/svg" class="ionicon" viewBox="0 0 512 512" fill="currentcolor" stroke="currentcolor" stroke-width="10"><path d="M324 256a36 36 0 1036 36 36 36 0 00-36-36z"/><circle cx="188" cy="292" r="36" transform="rotate(-22.5 187.997 291.992)"/><path d="M496 253.77c0-31.19-25.14-56.56-56-56.56a55.72 55.72.0 00-35.61 12.86c-35-23.77-80.78-38.32-129.65-41.27l22-79 66.41 13.2c1.9 26.48 24 47.49 50.65 47.49 28 0 50.78-23 50.78-51.21S441 48 413 48c-19.53.0-36.31 11.19-44.85 28.77l-90-17.89-31.1 109.52-4.63.13c-50.63 2.21-98.34 16.93-134.77 41.53A55.38 55.38.0 0072 197.21c-30.89.0-56 25.37-56 56.56a56.43 56.43.0 0028.11 49.06 98.65 98.65.0 00-.89 13.34c.11 39.74 22.49 77 63 105C146.36 448.77 199.51 464 256 464s109.76-15.23 149.83-42.89c40.53-28 62.85-65.27 62.85-105.06a109.32 109.32.0 00-.84-13.3A56.32 56.32.0 00496 253.77zM414 75a24 24 0 11-24 24 24 24 0 0124-24zM42.72 253.77a29.6 29.6.0 0129.42-29.71 29 29 0 0113.62 3.43c-15.5 14.41-26.93 30.41-34.07 47.68a30.23 30.23.0 01-8.97-21.4zM390.82 399c-35.74 24.59-83.6 38.14-134.77 38.14S157 423.61 121.29 399c-33-22.79-51.24-52.26-51.24-83A78.5 78.5.0 0175 288.72c5.68-15.74 16.16-30.48 31.15-43.79a155.17 155.17.0 0114.76-11.53l.3-.21.24-.17c35.72-24.52 83.52-38 134.61-38s98.9 13.51 134.62 38l.23.17.34.25A156.57 156.57.0 01406 244.92c15 13.32 25.48 28.05 31.16 43.81a85.44 85.44.0 014.31 17.67 77.29 77.29.0 01.6 9.65c-.01 30.72-18.21 60.19-51.25 82.95zm69.6-123.92c-7.13-17.28-18.56-33.29-34.07-47.72A29.09 29.09.0 01440 224a29.59 29.59.0 0129.41 29.71 30.07 30.07.0 01-8.99 21.39z"/><path d="M323.23 362.22c-.25.25-25.56 26.07-67.15 26.27-42-.2-66.28-25.23-67.31-26.27a4.14 4.14.0 00-5.83.0l-13.7 13.47a4.15 4.15.0 000 5.89c3.4 3.4 34.7 34.23 86.78 34.45 51.94-.22 83.38-31.05 86.78-34.45a4.16 4.16.0 000-5.9l-13.71-13.47a4.13 4.13.0 00-5.81.0z"/></svg></a><a target=_blank title="share to twitter" rel="noopener noreferrer" aria-label="share Managing Virtual Network Labs with KNE on twitter" href="https://twitter.com/intent/tweet/?text=Managing%20Virtual%20Network%20Labs%20with%20KNE&url=https%3a%2f%2fblog.itsalwaysthe.network%2fposts%2fkubernetes-based-network-emulation%2f&hashtags=kubernetes%2ckne%2csrlinux"><svg class="ionicon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="fill:none" stroke="currentcolor" stroke-width="2"><path d="M23 3a10.9 10.9.0 01-3.14 1.53 4.48 4.48.0 00-7.86 3v1A10.66 10.66.0 013 4s-4 9 5 13a11.64 11.64.0 01-7 2c9 5 20 0 20-11.5a4.5 4.5.0 00-.08-.83A7.72 7.72.0 0023 3z"/></svg></a><a target=_blank title="share to facebook" rel="noopener noreferrer" aria-label="share Managing Virtual Network Labs with KNE on facebook" href="https://facebook.com/sharer/sharer.php?u=https%3a%2f%2fblog.itsalwaysthe.network%2fposts%2fkubernetes-based-network-emulation%2f"><svg xmlns="http://www.w3.org/2000/svg" class="ionicon" viewBox="0 0 24 24" style="fill:none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-facebook"><path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/></svg></a></div></div></div></main><footer id=footer><div class="container has-padding is-flex"><ul class=links><li><a rel=nofollow target=_blank href=https://twitter.com/supertylerc title=Twitter>Twitter</a></li><li><a class="nav-link navbar-button" href=https://blog.itsalwaysthe.network/index.xml type=application/rss+xml>RSS</a></li><li><a rel=nofollow target=_blank href=https://github.com/wayjam/hugo-theme-fluency title="using Hugo theme fluency">Theme Fluency</a></li><li><a rel=nofollow target=_blank href=https://gohugo.io title="Built with hugo">Built with Hugo</a></li></ul><div class=copyright>&copy; 2022 It's Always the Network</div></div></footer><script>window.FluencyCopyIcon="\n\n\n\n\n\n\n\u003csvg xmlns=\u0027http://www.w3.org/2000/svg\u0027 class=\u0027ionicon\u0027 viewBox=\u00270 0 512 512\u0027\u003e\u003crect x=\u0027128\u0027 y=\u0027128\u0027 width=\u0027336\u0027 height=\u0027336\u0027 rx=\u002757\u0027 ry=\u002757\u0027 stroke-linejoin=\u0027round\u0027 class=\u0027ionicon-fill-none ionicon-stroke-width\u0027/\u003e\u003cpath d=\u0027M383.5 128l.5-24a56.16 56.16 0 00-56-56H112a64.19 64.19 0 00-64 64v216a56.16 56.16 0 0056 56h24\u0027 stroke-linecap=\u0027round\u0027 stroke-linejoin=\u0027round\u0027 class=\u0027ionicon-fill-none ionicon-stroke-width\u0027/\u003e\u003c/svg\u003e\n\n\n\n\n\n\n\n\n\n\n"</script><script defer src=https://blog.itsalwaysthe.network/js/main.min.b62162eb64232ce1a1cc62740790672a39ba8c30b022a93fe4c86cef053ba08f.js integrity="sha256-tiFi62QjLOGhzGJ0B5BnKjm6jDCwIqk/5Mhs7wU7oI8=" crossorigin=anonymous async></script><noscript><style type=text/css>#theme-selector-button{display:none}</style></noscript></body></html>

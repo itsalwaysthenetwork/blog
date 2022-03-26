@@ -1,0 +1,588 @@
+<!doctype html><html lang=en-us prefix="og: http://ogp.me/ns# fb: http://ogp.me/ns/fb#"><head lang=en-us><meta charset=utf-8><meta http-equiv=x-ua-compatible content="IE=edge,chrome=1"><meta name=HandheldFriendly content="True"><meta name=MobileOptimized content="320"><meta name=viewport content="width=device-width,initial-scale=1"><meta name=color-scheme content="dark light"><meta name=description content="This blog post will walk you through rewriting a portion of a service safely, 100% in production, by leveraging Istio&rsquo;s routing features. It features a basic service with the following endpoints:
+ /healhtz: a healthcheck endpoint that always responds with a 200 status code /: the base endpoint, which generates a random number a random number of times  Later, we&rsquo;ll discover that the random number generation function in our original service is suffering from horrible performance."><meta name=author content><meta name=keywords content="kubernetes,go,istio"><title>Refactoring Apps Safely with Istio | It's Always the Network</title><link rel=canonical href=https://blog.itsalwaysthe.network/posts/refactor-app-with-istio/><meta property="og:type" content="article"><meta property="og:description" content="This blog post will walk you through rewriting a portion of a service safely, 100% in production, by leveraging Istio&rsquo;s routing features. It features a basic service with the following endpoints:
+ /healhtz: a healthcheck endpoint that always responds with a 200 status code /: the base endpoint, which generates a random number a random number of times  Later, we&rsquo;ll discover that the random number generation function in our original service is suffering from horrible performance."><meta property="og:title" content="Refactoring Apps Safely with Istio"><meta property="og:site_name" content="It's Always the Network"><meta property="og:image:type" content="image/jpeg"><meta property="og:url" content="https://blog.itsalwaysthe.network/posts/refactor-app-with-istio/"><meta property="og:locale" content="en-us"><meta property="article:published_time" content="2022-03-25"><meta property="article:modified_time" content="2022-03-25"><meta property="article:tag" content="kubernetes"><meta property="article:tag" content="go"><meta property="article:tag" content="istio"><meta name=twitter:card content="summary"><meta name=twitter:title content="Refactoring Apps Safely with Istio | It's Always the Network"><meta name=twitter:description content="This blog post will walk you through rewriting a portion of a service safely, 100% in production, by leveraging Istio&rsquo;s routing features. It features a basic service with the following endpoints:
+ /healhtz: a healthcheck endpoint that always responds with a 200 status code /: the base endpoint, which generates a random number a random number of times  Later, we&rsquo;ll discover that the random number generation function in our original service is suffering from horrible performance."><meta name=twitter:domain content="https://blog.itsalwaysthe.network/posts/refactor-app-with-istio/"><link rel=icon href=https://blog.itsalwaysthe.network/favicon.ico><link rel=stylesheet href=//cdn.jsdelivr.net/npm/modern-normalize@1.0.0/modern-normalize.min.css><link rel=stylesheet href=https://blog.itsalwaysthe.network/style.min.c960935d8d4f104620049788ddc6687727237973b8603ffd305918dd3c5e9535.css integrity="sha256-yWCTXY1PEEYgBJeI3cZodycjeXO4YD/9MFkY3TxelTU=" rel="preload stylesheet" as=style></head><body><script>const currentTheme=window.localStorage.getItem("theme");currentTheme==="dark"?document.body.classList.toggle("theme-dark"):currentTheme=="light"&&document.body.classList.toggle("theme-light")</script><header id=header><div class=row><div class="container has-padding nav"><button id=navbar-toggler class=navbar-button aria-hidden=true><svg xmlns="http://www.w3.org/2000/svg" class="ionicon" viewBox="0 0 512 512"><path d="M64 384h384v-42.67H64zm0-106.67h384v-42.66H64zM64 128v42.67h384V128z"/></svg></button><div class=navbar-brand><a class="logo navbar-button" href=https://blog.itsalwaysthe.network/ title="It's Always the Network"><span>It's Always the Network</span></a></div><nav class=navbar role=navigation><ul><li class="nav-bar-item active"><a class="nav-link navbar-button" href=/posts/ title=posts><span>posts</span></a></li><li class=nav-bar-item><a class="nav-link navbar-button" href=/tags/ title=tags><span>tags</span></a></li></ul></nav><div class=theme-selector><button class="button is-text" id=theme-selector-button title="toggle theme">
+<span class="label icon"><svg xmlns="http://www.w3.org/2000/svg" class="ionicon" viewBox="0 0 512 512"><path d="M256 32C132.29 32 32 132.29 32 256s100.29 224 224 224 224-100.29 224-224S379.71 32 256 32zM128.72 383.28A180 180 0 01256 76v360a178.82 178.82.0 01-127.28-52.72z"/></svg></span></button></div></div><div class="container has-padding"><div class=breadcrumb><ol class=breadcrumb-nav><li><a href=https://blog.itsalwaysthe.network/>Home</a></li><li><a href=https://blog.itsalwaysthe.network/posts/>Posts</a></li><li class=active><a href=https://blog.itsalwaysthe.network/posts/refactor-app-with-istio/>Refactoring Apps Safely with Istio</a></li></ol></div></div></div></header><main id=main><div class="container has-padding"><div class="article-card post single"><h1 class=title>Refactoring Apps Safely with Istio</h1><div class=post-info><span><svg xmlns="http://www.w3.org/2000/svg" class="ionicon" viewBox="0 0 512 512"><path d="M32 456a24 24 0 0024 24h4e2a24 24 0 0024-24V176H32zm320-244a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm0 80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm-80-80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm0 80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm0 80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm-80-80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm0 80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm-80-80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm0 80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zM456 64h-55.92V32h-48v32H159.92V32h-48v32H56A23.8 23.8.0 0032 87.77V144h448V87.77A23.8 23.8.0 00456 64z"/></svg><time datetime=2022-03-25T00:00:00Z class=date>March 25, 2022</time></span>
+<span><svg xmlns="http://www.w3.org/2000/svg" class="ionicon" viewBox="0 0 512 512"><path d="M256 48C141.13 48 48 141.13 48 256c0 114.69 93.32 208 208 208 114.86.0 208-93.14 208-208 0-114.69-93.31-208-208-208zm108 240H244a4 4 0 01-4-4V116a4 4 0 014-4h24a4 4 0 014 4v140h92a4 4 0 014 4v24a4 4 0 01-4 4z"/></svg>22 mins to read</span>
+<span>posts</span></div><article class="post-entry content"><p>This blog post will walk you through rewriting a portion of a service safely,
+100% in production, by leveraging Istio&rsquo;s routing features. It features a
+basic service with the following endpoints:</p><ul><li><code>/healhtz</code>: a healthcheck endpoint that always responds with a <code>200</code> status
+code</li><li><code>/</code>: the base endpoint, which generates a random number a random number of
+times</li></ul><p>Later, we&rsquo;ll discover that the random number generation function in our
+original service is suffering from horrible performance. To solve this, we&rsquo;ll
+start by refactoring that function into its own endpoint:</p><ul><li><code>/random/number</code>: an endpoint that returns a random number between <code>0</code> and
+<code>9998</code></li></ul><p>Once the function has been refactored into its own endpoint and our internal
+<code>/</code> endpoint has been updated to call the new endpoint (instead of the function
+directly), we&rsquo;ll rewrite the slow, problematic code in another language, deploy
+it, and shift traffic slowly, observing the impact on performance as we go.</p><blockquote><p>The codebase is trivially slow. An intentional delay exists in the original
+Python codebase and does not exist in the rewritten Golang implementation.
+This post is not a comparison of languages, and there is an assumption that
+the &ldquo;faulty&rdquo; performance is not a fault of Python (and is therefore not
+necessarily solved by rewriting the logic in Go), but instead an issue so
+embedded in an existing codebase (such as the libraries it uses) that
+rewriting portions of the codebase from scratch would be easier, safer, and
+just plain &ldquo;better&rdquo; than trying to fix the original code.</p></blockquote><h2 id=prerequisites>Prerequisites</h2><p>Before we can really get going, we need to know what technologies we&rsquo;re using.
+We already spoiled the biggest part of the stack: [Istio][istio]. But we also
+need somewhere to run our application. Since we&rsquo;re using Istio, we&rsquo;ll also be
+using Kubernetes. To run Kubernetes, we&rsquo;ll use [minikube][minikube]. To
+manage our service deployment and configuration, we&rsquo;ll use [helm][helm].
+Finally, we&rsquo;ll use [skaffold][skaffold] for a slightly faster feedback loop.
+After all, we want continuous development!</p><h3 id=podmandocker>Podman/Docker</h3><p>Before anything else, we want to be able to build containers. Docker is
+falling out of favor in some circles (such as Kubernetes,
+[where it has been deprecated as a container runtime][docker-deprecation]), so
+I&rsquo;ve opted to use [podman][podman] for my local container needs. If you&rsquo;re
+running Fedora (I am), you can install <code>podman</code>:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ sudo dnf update -y
+</span></span><span style=display:flex><span>$ sudo dnf install -y podman
+</span></span></code></pre></div><p>For other operating systems, see the <a href=https://podman.io/getting-started/installation>official instructions</a>.
+For Docker, see <a href=https://docs.docker.com/get-docker/>their installation instructions</a>.</p><blockquote><p>If you&rsquo;re new to <code>podman</code>, 90% of the commands appear to be the same as
+<code>docker</code>. For example, <code>docker build -t example .</code> and
+<code>podman build -t example .</code>.</p></blockquote><h3 id=minikube>Minikube</h3><p>Before we can do anything with Kubernetes, we need to
+<a href=https://kubernetes.io/docs/tasks/tools/>install kubectl</a> and <a href=https://minikube.sigs.k8s.io/docs/start/>install minikube</a>.
+<code>minikube</code> lets us run Kubernetes on our laptops, while <code>kubectl</code> gives us a
+way to interact with Kubernetes.</p><p>If you&rsquo;re on Linux, the following should work:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ curl -LO <span style=color:#e6db74>&#34;https://dl.k8s.io/release/</span><span style=color:#66d9ef>$(</span>curl -L -s https://dl.k8s.io/release/stable.txt<span style=color:#66d9ef>)</span><span style=color:#e6db74>/bin/linux/amd64/kubectl&#34;</span>
+</span></span><span style=display:flex><span>$ sudo install -o root -g root -m <span style=color:#ae81ff>0755</span> kubectl /usr/local/bin/kubectl
+</span></span><span style=display:flex><span>$ curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+</span></span><span style=display:flex><span>$ sudo install minikube-linux-amd64 /usr/local/bin/minikube
+</span></span></code></pre></div><p>Or on macOS:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ brew install kubectl
+</span></span><span style=display:flex><span>$ curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-darwin-amd64
+</span></span><span style=display:flex><span>$ sudo install minikube-darwin-amd64 /usr/local/bin/minikube
+</span></span></code></pre></div><blockquote><p>If you run into problems, the <a href=https://minikube.sigs.k8s.io/docs/start/>official minikube instructions</a>
+or <a href=https://kubernetes.io/docs/tasks/tools/>official kubectl docs</a> would be a good place to start.</p></blockquote><p>Once installed, start a cluster up:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ minikube start --cpus <span style=color:#ae81ff>4</span> --memory <span style=color:#ae81ff>8192</span>
+</span></span><span style=display:flex><span>😄  minikube v1.25.2 on Fedora <span style=color:#ae81ff>35</span>
+</span></span><span style=display:flex><span>✨  Using the podman driver based on user configuration
+</span></span><span style=display:flex><span>❗  Your cgroup does not allow setting memory.
+</span></span><span style=display:flex><span>    ▪ More information: https://docs.docker.com/engine/install/linux-postinstall/#your-kernel-does-not-support-cgroup-swap-limit-capabilities
+</span></span><span style=display:flex><span>👍  Starting control plane node minikube in cluster minikube
+</span></span><span style=display:flex><span>🚜  Pulling base image ...
+</span></span><span style=display:flex><span>E0323 19:31:25.359746 <span style=color:#ae81ff>2176044</span> cache.go:203<span style=color:#f92672>]</span> Error downloading kic artifacts:  not yet implemented, see issue <span style=color:#75715e>#8426</span>
+</span></span><span style=display:flex><span>🔥  Creating podman container <span style=color:#f92672>(</span>CPUs<span style=color:#f92672>=</span>4, Memory<span style=color:#f92672>=</span>8192MB<span style=color:#f92672>)</span> ...
+</span></span><span style=display:flex><span>🐳  Preparing Kubernetes v1.23.3 on Docker 20.10.12 ...
+</span></span><span style=display:flex><span>    ▪ kubelet.housekeeping-interval<span style=color:#f92672>=</span>5m
+</span></span><span style=display:flex><span>    ▪ Generating certificates and keys ...
+</span></span><span style=display:flex><span>    ▪ Booting up control plane ...
+</span></span><span style=display:flex><span>    ▪ Configuring RBAC rules ...
+</span></span><span style=display:flex><span>🔎  Verifying Kubernetes components...
+</span></span><span style=display:flex><span>    ▪ Using image gcr.io/k8s-minikube/storage-provisioner:v5
+</span></span><span style=display:flex><span>🌟  Enabled addons: storage-provisioner, default-storageclass
+</span></span><span style=display:flex><span>🏄  Done! kubectl is now configured to use <span style=color:#e6db74>&#34;minikube&#34;</span> cluster and <span style=color:#e6db74>&#34;default&#34;</span> namespace by default
+</span></span></code></pre></div><blockquote><p>You may not need 4 CPUs and 8G RAM to follow along. My machine had the spare
+capacity, so I tried to get as close to the Istio-recommended specs of 4 CPUs
+and 16G RAM as I could.</p></blockquote><p>Next, enable the <code>metallb</code> addon to make it easier to access cluster services;
+and enable the <code>registry</code> addon to easily publish images:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ minikube addons enable metallb
+</span></span><span style=display:flex><span>    ▪ Using image metallb/speaker:v0.9.6
+</span></span><span style=display:flex><span>    ▪ Using image metallb/controller:v0.9.6
+</span></span><span style=display:flex><span>🌟  The <span style=color:#e6db74>&#39;metallb&#39;</span> addon is enabled
+</span></span><span style=display:flex><span>$ minikube addons enable registry
+</span></span><span style=display:flex><span>    ▪ Using image registry:2.7.1
+</span></span><span style=display:flex><span>    ▪ Using image gcr.io/google_containers/kube-registry-proxy:0.4
+</span></span><span style=display:flex><span>🔎  Verifying registry addon...
+</span></span><span style=display:flex><span>🌟  The <span style=color:#e6db74>&#39;registry&#39;</span> addon is enabled
+</span></span></code></pre></div><p>Before proceeding, update the <code>metallb</code> configuration with a range of IPs to
+assign. For this, find out the IP of your <code>minikube</code> node:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ kubectl get nodes -o wide
+</span></span><span style=display:flex><span>NAME       STATUS   ROLES                  AGE     VERSION   INTERNAL-IP    EXTERNAL-IP   OS-IMAGE             KERNEL-VERSION                  CONTAINER-RUNTIME
+</span></span><span style=display:flex><span>minikube   Ready    control-plane,master   8m28s   v1.23.3   192.168.49.2   &lt;none&gt;        Ubuntu 20.04.2 LTS   5.16.13-1.surface.fc35.x86_64   docker://20.10.12
+</span></span></code></pre></div><p>In my example, the <code>INTERNAL-IP</code> is <code>192.168.49.2</code>, so I&rsquo;ll pick a range of <code>192.168.49.50-192.168.49.100</code>,
+a subset of IPs within the <code>192.168.49.0/24</code> CIDR. Update the <code>configmap</code> for <code>metallb</code>:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ kubectl edit configmap config -n metallb-system
+</span></span></code></pre></div><p>Find the list of <code>addresses</code> and change it to have a single element with your
+range. For my example, I modified the following:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#f92672>data</span>:
+</span></span><span style=display:flex><span>  <span style=color:#f92672>config</span>: |<span style=color:#e6db74>
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    address-pools:
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    - name: default
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      protocol: layer2
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      addresses:
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      - -</span>    
+</span></span></code></pre></div><p>To look like this:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#f92672>data</span>:
+</span></span><span style=display:flex><span>  <span style=color:#f92672>config</span>: |<span style=color:#e6db74>
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    address-pools:
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>    - name: default
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      protocol: layer2
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      addresses:
+</span></span></span><span style=display:flex><span><span style=color:#e6db74>      - 192.168.49.50-192.168.49.100</span>    
+</span></span></code></pre></div><p>Or, as just a simple diff:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ $ diff old.yml new.yml 
+</span></span><span style=display:flex><span>8c8
+</span></span><span style=display:flex><span>&lt;       - -
+</span></span><span style=display:flex><span>---
+</span></span><span style=display:flex><span>&gt;       - 192.168.49.50-192.168.49.100
+</span></span></code></pre></div><blockquote><p>While the above addons aren&rsquo;t necessary, they can make troubleshooting easier
+if you run into issues.</p></blockquote><p>And finally, make sure you can list pods:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ kubectl get pods -n kube-system
+</span></span><span style=display:flex><span>NAME                               READY   STATUS    RESTARTS        AGE
+</span></span><span style=display:flex><span>coredns-64897985d-rbsxk            1/1     Running   <span style=color:#ae81ff>0</span>               5m21s
+</span></span><span style=display:flex><span>etcd-minikube                      1/1     Running   <span style=color:#ae81ff>0</span>               5m33s
+</span></span><span style=display:flex><span>kube-apiserver-minikube            1/1     Running   <span style=color:#ae81ff>0</span>               5m35s
+</span></span><span style=display:flex><span>kube-controller-manager-minikube   1/1     Running   <span style=color:#ae81ff>0</span>               5m32s
+</span></span><span style=display:flex><span>kube-proxy-kpxl2                   1/1     Running   <span style=color:#ae81ff>0</span>               5m21s
+</span></span><span style=display:flex><span>kube-scheduler-minikube            1/1     Running   <span style=color:#ae81ff>0</span>               5m32s
+</span></span><span style=display:flex><span>registry-nk4wd                     1/1     Running   <span style=color:#ae81ff>0</span>               51s
+</span></span><span style=display:flex><span>registry-proxy-hc274               1/1     Running   <span style=color:#ae81ff>0</span>               51s
+</span></span><span style=display:flex><span>storage-provisioner                1/1     Running   <span style=color:#ae81ff>1</span> <span style=color:#f92672>(</span>4m49s ago<span style=color:#f92672>)</span>   5m31s
+</span></span></code></pre></div><h3 id=helm>Helm</h3><p>Helm is a package manager for Kubernetes. In much the same way as you might
+<code>brew install &lt;pkg></code> or <code>apt-get install &lt;pkg></code>, you can
+<code>helm install &lt;chart></code>.</p><p>Installing helm is as easy as running the Helm install script:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+</span></span></code></pre></div><blockquote><p><code>curl [...] | bash</code> isn&rsquo;t exactly great form. Visit
+<a href=https://helm.sh/docs/intro/install/>the official instructions</a> for a better approach.</p></blockquote><h3 id=istio>Istio</h3><p>Istio is the key to this entire blog post and enables features such as:</p><ul><li>mTLS</li><li>Tracing</li><li>Performance metrics</li><li>Load balancing</li><li>A/B traffic routing</li><li>Circuit breaking</li></ul><p>Installing Istio as as simple as running a script and an <code>istioctl</code> command:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ curl -L https://istio.io/downloadIstio | sh -
+</span></span><span style=display:flex><span>$ cd istio-*
+</span></span><span style=display:flex><span>$ sudo install bin/istioctl /usr/local/bin/istioctl
+</span></span><span style=display:flex><span>$ istioctl install
+</span></span><span style=display:flex><span>This will install the Istio 1.13.2 default profile with <span style=color:#f92672>[</span><span style=color:#e6db74>&#34;Istio core&#34;</span> <span style=color:#e6db74>&#34;Istiod&#34;</span> <span style=color:#e6db74>&#34;Ingress gateways&#34;</span><span style=color:#f92672>]</span> components into the cluster. Proceed? <span style=color:#f92672>(</span>y/N<span style=color:#f92672>)</span> y
+</span></span><span style=display:flex><span>✔ Istio core installed                                                                                                                                                                                  
+</span></span><span style=display:flex><span>✔ Istiod installed                                                                                                                                                                                      
+</span></span><span style=display:flex><span>✔ Ingress gateways installed                                                                                                                                                                            
+</span></span><span style=display:flex><span>✔ Installation complete                                                                                                                                                                                 Making this installation the default <span style=color:#66d9ef>for</span> injection and validation.
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Thank you <span style=color:#66d9ef>for</span> installing Istio 1.13.  Please take a few minutes to tell us about your install/upgrade experience!  https://forms.gle/pzWZpAvMVBecaQ9h9
+</span></span></code></pre></div><p>Before going further, let&rsquo;s find the <code>LoadBalancer</code> IP for the Istio ingress
+gateway pod and create an entry in <code>/etc/hosts</code> to map the IP to the name of
+the service we&rsquo;re refactoring.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ kubectl get svc istio-ingressgateway -n istio-system
+</span></span><span style=display:flex><span>NAME                   TYPE           CLUSTER-IP     EXTERNAL-IP     PORT<span style=color:#f92672>(</span>S<span style=color:#f92672>)</span>                                      AGE
+</span></span><span style=display:flex><span>istio-ingressgateway   LoadBalancer   10.109.42.27   192.168.49.50   15021:31486/TCP,80:32626/TCP,443:30232/TCP   19m
+</span></span><span style=display:flex><span>$ echo <span style=color:#e6db74>&#34;192.168.49.50 rewrite-app-with-istio.test&#34;</span> | sudo tee -a /etc/hosts
+</span></span><span style=display:flex><span>192.168.49.50 rewrite-app-with-istio.test
+</span></span></code></pre></div><blockquote><p>An Istio gateway pod is similar to an Ingress controller pod. It makes it
+possible to get traffic into the service mesh from the outside world.</p></blockquote><p>For more details, see the <a href=https://istio.io/latest/docs/setup/getting-started/>official guide</a>.</p><h3 id=skaffold>Skaffold</h3><p>Skaffold lets us define how our application is deployed and watches for changes
+on disk, automatically rebuilding and/or redeploying when changes are detected.</p><p>Installing Skaffold on Linux:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ curl -Lo skaffold https://storage.googleapis.com/skaffold/releases/latest/skaffold-linux-amd64
+</span></span><span style=display:flex><span>$ sudo install skaffold /usr/local/bin/
+</span></span></code></pre></div><p>And on macOS:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ curl -Lo skaffold https://storage.googleapis.com/skaffold/releases/latest/skaffold-darwin-amd64
+</span></span><span style=display:flex><span>$ sudo install skaffold /usr/local/bin/
+</span></span></code></pre></div><p>As usual, consult the <a href=https://skaffold.dev/docs/install/#standalone-binary>official docs</a> for more details.</p><h2 id=application-baseline>Application Baseline</h2><p>Our entire goal is to refactor an application with poor performance, so let&rsquo;s
+start with deploying our application as it exists today!</p><p>You should be able to follow the commands below to clone the repository, switch
+to the appropriate version (reflected as branches named <code>phase-$number</code>),
+deploy to your <code>minikube</code> cluster using <code>skaffold</code>, and verify the service
+works.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ git clone https://github.com/supertylerc/istio-rewrite-app
+</span></span><span style=display:flex><span>$ git checkout phase-1
+</span></span><span style=display:flex><span>$ skaffold dev
+</span></span><span style=display:flex><span>&lt;SNIP&gt;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># In another terminal window</span>
+</span></span><span style=display:flex><span>$ curl rewrite-app-with-istio.test/
+</span></span><span style=display:flex><span><span style=color:#f92672>{</span><span style=color:#e6db74>&#34;location&#34;</span>:<span style=color:#e6db74>&#34;/&#34;</span>,<span style=color:#e6db74>&#34;num_requests&#34;</span>:44,<span style=color:#e6db74>&#34;responses&#34;</span>:<span style=color:#f92672>[{</span><span style=color:#e6db74>&#34;number&#34;</span>:6245<span style=color:#f92672>}</span>,<span style=color:#f92672>{</span><span style=color:#e6db74>&#34;number&#34;</span>:3801<span style=color:#f92672>}</span>,<span style=color:#f92672>{</span><span style=color:#e6db74>&#34;number&#34;</span>:2548<span style=color:#f92672>}</span>,<span style=color:#f92672>{</span><span style=color:#e6db74>&#34;number&#34;</span>:6676<span style=color:#f92672>}</span>,<span style=color:#f92672>{</span><span style=color:#e6db74>&#34;number&#34;</span>:6959<span style=color:#f92672>}</span>,<span style=color:#f92672>{</span><span style=color:#e6db74>&#34;number&#34;</span>:8770<span style=color:#f92672>}</span>,<span style=color:#f92672>{</span><span style=color:#e6db74>&#34;number&#34;</span>:8827<span style=color:#f92672>}</span>,<span style=color:#f92672>{</span><span style=color:#e6db74>&#34;number&#34;</span>:6233<span style=color:#f92672>}</span>,<span style=color:#f92672>{</span><span style=color:#e6db74>&#34;number&#34;</span>:3857<span style=color:#f92672>}</span>,<span style=color:#f92672>{</span><span style=color:#e6db74>&#34;number&#34;</span>:6438<span style=color:#f92672>}</span>,<span style=color:#f92672>{</span><span style=color:#e6db74>&#34;number&#34;</span>:7188<span style=color:#f92672>}</span>,<span style=color:#f92672>{</span><span style=color:#e6db74>&#34;number&#34;</span>:2737<span style=color:#f92672>}</span>,<span style=color:#f92672>{</span><span style=color:#e6db74>&#34;number&#34;</span>:3254<span style=color:#f92672>}</span>,<span style=color:#f92672>{</span><span style=color:#e6db74>&#34;number&#34;</span>:1474<span style=color:#f92672>}</span>,<span style=color:#f92672>{</span><span style=color:#e6db74>&#34;number&#34;</span>:959<span style=color:#f92672>}</span>,<span style=color:#f92672>{</span><span style=color:#e6db74>&#34;number&#34;</span>:4878<span style=color:#f92672>}</span>,<span style=color:#f92672>{</span><span style=color:#e6db74>&#34;number&#34;</span>:1151<span style=color:#f92672>}</span>,<span style=color:#f92672>{</span><span style=color:#e6db74>&#34;number&#34;</span>:8851<span style=color:#f92672>}</span>,<span style=color:#f92672>{</span><span style=color:#e6db74>&#34;number&#34;</span>:5925<span style=color:#f92672>}</span>,<span style=color:#f92672>{</span><span style=color:#e6db74>&#34;number&#34;</span>:4714<span style=color:#f92672>}</span>,<span style=color:#f92672>{</span><span style=color:#e6db74>&#34;number&#34;</span>:5203<span style=color:#f92672>}</span>,<span style=color:#f92672>{</span><span style=color:#e6db74>&#34;number&#34;</span>:2429<span style=color:#f92672>}</span>,<span style=color:#f92672>{</span><span style=color:#e6db74>&#34;number&#34;</span>:5149<span style=color:#f92672>}</span>,<span style=color:#f92672>{</span><span style=color:#e6db74>&#34;number&#34;</span>:9408<span style=color:#f92672>}</span>,<span style=color:#f92672>{</span><span style=color:#e6db74>&#34;number&#34;</span>:7805<span style=color:#f92672>}</span>,<span style=color:#f92672>{</span><span style=color:#e6db74>&#34;number&#34;</span>:6783<span style=color:#f92672>}</span>,<span style=color:#f92672>{</span><span style=color:#e6db74>&#34;number&#34;</span>:4636<span style=color:#f92672>}</span>,<span style=color:#f92672>{</span><span style=color:#e6db74>&#34;number&#34;</span>:3549<span style=color:#f92672>}</span>,<span style=color:#f92672>{</span><span style=color:#e6db74>&#34;number&#34;</span>:3188<span style=color:#f92672>}</span>,<span style=color:#f92672>{</span><span style=color:#e6db74>&#34;number&#34;</span>:9600<span style=color:#f92672>}</span>,<span style=color:#f92672>{</span><span style=color:#e6db74>&#34;number&#34;</span>:4609<span style=color:#f92672>}</span>,<span style=color:#f92672>{</span><span style=color:#e6db74>&#34;number&#34;</span>:342<span style=color:#f92672>}</span>,<span style=color:#f92672>{</span><span style=color:#e6db74>&#34;number&#34;</span>:9104<span style=color:#f92672>}</span>,<span style=color:#f92672>{</span><span style=color:#e6db74>&#34;number&#34;</span>:8082<span style=color:#f92672>}</span>,<span style=color:#f92672>{</span><span style=color:#e6db74>&#34;number&#34;</span>:3424<span style=color:#f92672>}</span>,<span style=color:#f92672>{</span><span style=color:#e6db74>&#34;number&#34;</span>:8156<span style=color:#f92672>}</span>,<span style=color:#f92672>{</span><span style=color:#e6db74>&#34;number&#34;</span>:3603<span style=color:#f92672>}</span>,<span style=color:#f92672>{</span><span style=color:#e6db74>&#34;number&#34;</span>:2884<span style=color:#f92672>}</span>,<span style=color:#f92672>{</span><span style=color:#e6db74>&#34;number&#34;</span>:8624<span style=color:#f92672>}</span>,<span style=color:#f92672>{</span><span style=color:#e6db74>&#34;number&#34;</span>:1833<span style=color:#f92672>}</span>,<span style=color:#f92672>{</span><span style=color:#e6db74>&#34;number&#34;</span>:5310<span style=color:#f92672>}</span>,<span style=color:#f92672>{</span><span style=color:#e6db74>&#34;number&#34;</span>:1898<span style=color:#f92672>}</span>,<span style=color:#f92672>{</span><span style=color:#e6db74>&#34;number&#34;</span>:7776<span style=color:#f92672>}</span>,<span style=color:#f92672>{</span><span style=color:#e6db74>&#34;number&#34;</span>:3541<span style=color:#f92672>}]</span>,<span style=color:#e6db74>&#34;time&#34;</span>:20.019914<span style=color:#f92672>}</span>
+</span></span></code></pre></div><p>You can rerun this <code>curl</code> multiple times, taking note of the <code>num_requests</code> and
+<code>time</code> fields. Let&rsquo;s take a (brief) look at our code at this stage:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#a6e22e>@app</span><span style=color:#f92672>.</span>route(<span style=color:#e6db74>&#39;/&#39;</span>)
+</span></span><span style=display:flex><span><span style=color:#66d9ef>def</span> <span style=color:#a6e22e>root</span>():
+</span></span><span style=display:flex><span>    start <span style=color:#f92672>=</span> datetime<span style=color:#f92672>.</span>now()
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    num_requests <span style=color:#f92672>=</span> random<span style=color:#f92672>.</span>randint(<span style=color:#ae81ff>0</span>, <span style=color:#ae81ff>50</span>)
+</span></span><span style=display:flex><span>    responses <span style=color:#f92672>=</span> []
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>for</span> _ <span style=color:#f92672>in</span> range(<span style=color:#ae81ff>0</span>, num_requests):
+</span></span><span style=display:flex><span>        responses<span style=color:#f92672>.</span>append(random_number())
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    finish <span style=color:#f92672>=</span> datetime<span style=color:#f92672>.</span>now()
+</span></span><span style=display:flex><span>    duration <span style=color:#f92672>=</span> finish <span style=color:#f92672>-</span> start 
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>return</span> {
+</span></span><span style=display:flex><span>        <span style=color:#e6db74>&#34;location&#34;</span>: <span style=color:#e6db74>&#34;/&#34;</span>,
+</span></span><span style=display:flex><span>        <span style=color:#e6db74>&#34;num_requests&#34;</span>: num_requests,
+</span></span><span style=display:flex><span>        <span style=color:#e6db74>&#34;responses&#34;</span>: responses,
+</span></span><span style=display:flex><span>        <span style=color:#e6db74>&#34;time&#34;</span>: float(duration<span style=color:#f92672>.</span>total_seconds()),
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>def</span> <span style=color:#a6e22e>random_number</span>():
+</span></span><span style=display:flex><span>    <span style=color:#75715e># Simulate some problem in the app logic by sleeping for random time</span>
+</span></span><span style=display:flex><span>    <span style=color:#75715e># This will later become a new API endpoint that we break out</span>
+</span></span><span style=display:flex><span>    time<span style=color:#f92672>.</span>sleep(random<span style=color:#f92672>.</span>randint(<span style=color:#ae81ff>0.0</span>, <span style=color:#ae81ff>1.0</span>))
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>return</span> {
+</span></span><span style=display:flex><span>        <span style=color:#e6db74>&#34;number&#34;</span>: random<span style=color:#f92672>.</span>randint(<span style=color:#ae81ff>0</span>, <span style=color:#ae81ff>9999</span>)
+</span></span><span style=display:flex><span>    }
+</span></span></code></pre></div><p>As you can see, we&rsquo;re introducing a <code>time.sleep()</code> function to sleep between
+<code>0</code> and <code>1.0</code> second, or between <code>0</code> and <code>1000</code> miliseconds. This simulates
+poor performance in our code, and it&rsquo;s the entire reason we&rsquo;ve decided to
+rewrite our application. The first thing we&rsquo;ll do is to make this
+<code>random_number()</code> function into an endpoint within our existing Python
+application, and we&rsquo;ll follow that up by writing an implementation of <em>that</em>
+endpoint in Go. Along the way, we&rsquo;ll leverage some basic Istio features to
+make this refactoring safer for our end users.</p><h3 id=install-observability-stack>Install Observability Stack</h3><p>So before we start refactoring, we should generate some requests so that we
+can have a baseline performance. For this, we&rsquo;ll deploy Prometheus, Grafana,
+Kiali, and Jaeger. This will make up our &ldquo;observability stack,&rdquo; giving us
+some insight into the performance and reliability of our application. One of
+the things to note through this process is that we&rsquo;re not making any changes to
+our application code to get this information, which means no matter how
+distributed or diverse your application stack (and its many languages), you
+can get this with no code changes.</p><ul><li>Install Prometheus, a time-series database and collection tool</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.13/samples/addons/prometheus.yaml
+</span></span><span style=display:flex><span>serviceaccount/prometheus created
+</span></span><span style=display:flex><span>configmap/prometheus created
+</span></span><span style=display:flex><span>clusterrole.rbac.authorization.k8s.io/prometheus created
+</span></span><span style=display:flex><span>clusterrolebinding.rbac.authorization.k8s.io/prometheus created
+</span></span><span style=display:flex><span>service/prometheus created
+</span></span><span style=display:flex><span>deployment.apps/prometheus created
+</span></span></code></pre></div><ul><li>Install Grafana, a data visualization and dashboarding tool</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.13/samples/addons/grafana.yaml
+</span></span><span style=display:flex><span>serviceaccount/grafana created
+</span></span><span style=display:flex><span>configmap/grafana created
+</span></span><span style=display:flex><span>service/grafana created
+</span></span><span style=display:flex><span>deployment.apps/grafana created
+</span></span><span style=display:flex><span>configmap/istio-grafana-dashboards created
+</span></span><span style=display:flex><span>configmap/istio-services-grafana-dashboards created
+</span></span></code></pre></div><ul><li>Install Jaeger, a distributed tracing tool</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.13/samples/addons/jaeger.yaml
+</span></span><span style=display:flex><span>deployment.apps/jaeger created
+</span></span><span style=display:flex><span>service/tracing created
+</span></span><span style=display:flex><span>service/zipkin created
+</span></span><span style=display:flex><span>service/jaeger-collector created
+</span></span></code></pre></div><ul><li>Install Kiali, a service mesh observability dashboard</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.13/samples/addons/kiali.yaml
+</span></span><span style=display:flex><span>serviceaccount/kiali created
+</span></span><span style=display:flex><span>configmap/kiali created
+</span></span><span style=display:flex><span>clusterrole.rbac.authorization.k8s.io/kiali-viewer created
+</span></span><span style=display:flex><span>clusterrole.rbac.authorization.k8s.io/kiali created
+</span></span><span style=display:flex><span>clusterrolebinding.rbac.authorization.k8s.io/kiali created
+</span></span><span style=display:flex><span>role.rbac.authorization.k8s.io/kiali-controlplane created
+</span></span><span style=display:flex><span>rolebinding.rbac.authorization.k8s.io/kiali-controlplane created
+</span></span><span style=display:flex><span>service/kiali created
+</span></span><span style=display:flex><span>deployment.apps/kiali created
+</span></span></code></pre></div><h3 id=generate-requests>Generate Requests</h3><p>For this, we&rsquo;ll use <code>siege</code> to run multiple <code>GET /</code> requests concurrently.
+We&rsquo;ll use our observability stack to measure the performance of our app based
+on 10 concurrent requests.</p><p>On Fedora, you can install <code>siege</code> with a simple <code>sudo dnf install -y siege</code>.
+On Ubuntu, this is <code>sudo apt install -y siege</code>, and on macOS you can use <code>brew</code>
+to install it with <code>brew install siege</code>.</p><p>Now, start your siege!</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ siege --concurrent<span style=color:#f92672>=</span><span style=color:#ae81ff>10</span> --benchmark --time<span style=color:#f92672>=</span>5M http://rewrite-app-with-istio.test/
+</span></span><span style=display:flex><span>HTTP/1.1 <span style=color:#ae81ff>200</span>    14.03 secs:     <span style=color:#ae81ff>623</span> bytes <span style=color:#f92672>==</span>&gt; GET  /
+</span></span><span style=display:flex><span>HTTP/1.1 <span style=color:#ae81ff>200</span>    13.02 secs:     <span style=color:#ae81ff>338</span> bytes <span style=color:#f92672>==</span>&gt; GET  /
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>&lt;SNIP&gt;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>HTTP/1.1 <span style=color:#ae81ff>200</span>     2.02 secs:     <span style=color:#ae81ff>160</span> bytes <span style=color:#f92672>==</span>&gt; GET  /
+</span></span><span style=display:flex><span>HTTP/1.1 <span style=color:#ae81ff>200</span>    13.02 secs:     <span style=color:#ae81ff>638</span> bytes <span style=color:#f92672>==</span>&gt; GET  /
+</span></span><span style=display:flex><span>HTTP/1.1 <span style=color:#ae81ff>200</span>    16.03 secs:     <span style=color:#ae81ff>544</span> bytes <span style=color:#f92672>==</span>&gt; GET  /
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Lifting the server siege...
+</span></span><span style=display:flex><span>Transactions:		         <span style=color:#ae81ff>245</span> hits
+</span></span><span style=display:flex><span>Availability:		      100.00 %
+</span></span><span style=display:flex><span>Elapsed time:		      299.78 secs
+</span></span><span style=display:flex><span>Data transferred:	        0.10 MB
+</span></span><span style=display:flex><span>Response time:		       11.84 secs
+</span></span><span style=display:flex><span>Transaction rate:	        0.82 trans/sec
+</span></span><span style=display:flex><span>Throughput:		        0.00 MB/sec
+</span></span><span style=display:flex><span>Concurrency:		        9.68
+</span></span><span style=display:flex><span>Successful transactions:         <span style=color:#ae81ff>245</span>
+</span></span><span style=display:flex><span>Failed transactions:	           <span style=color:#ae81ff>0</span>
+</span></span><span style=display:flex><span>Longest transaction:	       32.04
+</span></span><span style=display:flex><span>Shortest transaction:	        0.00
+</span></span></code></pre></div><p>While this is running, use the <code>istioctl dashboard grafana</code> and
+<code>istioctl dashboard kiali</code> commands to explore the metrics that Istio is
+providing &ldquo;for free.&rdquo;</p><p><img src=/img/phase1-baseline-grafana.png alt="Grafana Dashboard Baseline">
+<img src=/img/phase1-baseline-kiali.png alt="Kiali Dashboard Baseline"></p><h2 id=refactor-logic-to-its-own-endpoint>Refactor Logic to its own Endpoint</h2><p>As you can see, we get metrics that confirm our app does not have great
+performance. Now, after some debugging, we&rsquo;ve determined that the problem is
+our random number generation logic. We&rsquo;ve decided that the best way to handle
+this is to rewrite that particular logic in Go. Before that, though, we decide
+to refactor the logic <em>just slightly</em> so that the random number generation is
+contained within its own endpoint. To simulate that, you can checkout the
+<code>phase-2</code> branch:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ git checkout phase-2
+</span></span><span style=display:flex><span>branch <span style=color:#e6db74>&#39;phase-2&#39;</span> set up to track <span style=color:#e6db74>&#39;origin/phase-2&#39;</span>.
+</span></span><span style=display:flex><span>Switched to a new branch <span style=color:#e6db74>&#39;phase-2&#39;</span>
+</span></span></code></pre></div><p>Our changes are pretty simple: we add the <code>requests</code> library to make calls to
+the <code>/random/number</code> endpoint, and we add the <code>/random/number</code> route using
+Flask.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ diff --git a/app.py b/app.py
+</span></span><span style=display:flex><span>index 01eb241..717dda7 <span style=color:#ae81ff>100644</span>
+</span></span><span style=display:flex><span>--- a/app.py
+</span></span><span style=display:flex><span>+++ b/app.py
+</span></span><span style=display:flex><span>@@ -18,7 +18,7 @@ def root<span style=color:#f92672>()</span>:
+</span></span><span style=display:flex><span>     num_requests <span style=color:#f92672>=</span> random.randint<span style=color:#f92672>(</span>0, 50<span style=color:#f92672>)</span>
+</span></span><span style=display:flex><span>     responses <span style=color:#f92672>=</span> <span style=color:#f92672>[]</span>
+</span></span><span style=display:flex><span>     <span style=color:#66d9ef>for</span> _ in range<span style=color:#f92672>(</span>0, num_requests<span style=color:#f92672>)</span>:
+</span></span><span style=display:flex><span>-        responses.append<span style=color:#f92672>(</span>random_number<span style=color:#f92672>())</span>
+</span></span><span style=display:flex><span>+        responses.append<span style=color:#f92672>(</span>requests.get<span style=color:#f92672>(</span>f<span style=color:#e6db74>&#34;{EXAMPLE_SERVICE}/random/number&#34;</span><span style=color:#f92672>)</span>.json<span style=color:#f92672>())</span>
+</span></span><span style=display:flex><span> 
+</span></span><span style=display:flex><span>     finish <span style=color:#f92672>=</span> datetime.now<span style=color:#f92672>()</span>
+</span></span><span style=display:flex><span>     duration <span style=color:#f92672>=</span> finish - start 
+</span></span><span style=display:flex><span>@@ -31,11 +31,13 @@ def root<span style=color:#f92672>()</span>:
+</span></span><span style=display:flex><span>     <span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span> 
+</span></span><span style=display:flex><span> 
+</span></span><span style=display:flex><span>+@app.route<span style=color:#f92672>(</span><span style=color:#e6db74>&#34;/random/number&#34;</span><span style=color:#f92672>)</span>
+</span></span><span style=display:flex><span> def random_number<span style=color:#f92672>()</span>:
+</span></span><span style=display:flex><span>     <span style=color:#75715e># Simulate some problem in the app logic by sleeping for random time</span>
+</span></span><span style=display:flex><span>-    <span style=color:#75715e># This will later become a new API endpoint that we break out</span>
+</span></span><span style=display:flex><span>+    <span style=color:#75715e># This is a new API endpoint that we will rewrite in Golang later</span>
+</span></span><span style=display:flex><span>     time.sleep<span style=color:#f92672>(</span>random.randint<span style=color:#f92672>(</span>0.0, 1.0<span style=color:#f92672>))</span>
+</span></span><span style=display:flex><span>     <span style=color:#66d9ef>return</span> <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>+        <span style=color:#e6db74>&#34;location&#34;</span>: <span style=color:#e6db74>&#34;/random/number&#34;</span>,
+</span></span><span style=display:flex><span>         <span style=color:#e6db74>&#34;number&#34;</span>: random.randint<span style=color:#f92672>(</span>0, 9999<span style=color:#f92672>)</span>
+</span></span><span style=display:flex><span>     <span style=color:#f92672>}</span>
+</span></span></code></pre></div><p>Great! If your <code>skaffold</code> is still running, this should update automatically.
+If it isn&rsquo;t, though, you can just <code>skaffold dev</code> to re-deploy. We shouldn&rsquo;t
+see any difference between the previous version and the new one &ndash; we just
+added an endpoint with existing business logic and started making additional
+HTTP requests to get the data. Re-run your <code>siege</code> tests and review your
+baseline metrics for this phase.</p><p>When you look at your metrics, you might notice that the 50th and 90th
+percentile response times appear to be drastically improved simply by
+refactoring our endpoint. Unfortunately, this isn&rsquo;t really reflecting
+our end user&rsquo;s experience. Those metrics are now also reflecting the requests
+we&rsquo;re making to our new endpoint! Since we call these <em>every</em> time we want a
+number (instead of the endpoint accepting a number of numbers to generate), we
+get deceptively &ldquo;better&rdquo; performance in the 90th percentile! This can be
+confusing, but the real key here is our 99th percentile. Something is still
+very wrong.</p><p><img src=/img/phase2-baseline-grafana.png alt="Grafana Dashboard Baseline">
+<img src=/img/phase2-baseline-kiali.png alt="Kiali Dashboard Baseline"></p><h2 id=rewrite-the-random-number-generator-in-go>Rewrite the Random Number Generator in Go</h2><p>Now, we&rsquo;ll rewrite our Random Number Generator in Go. The main <code>/</code> URI will
+still be handled by our original Python code, but we&rsquo;ll try to improve our
+performance by switching to Go for <em>just</em> the problematic endpoint. To do
+that safely, we&rsquo;ll leave the <code>/random/number</code> endpoint in the Python codebase
+and slowly migrate traffic using Istio&rsquo;s traffic routing features. This will
+let us see if there are any major, unseen errors before we really migrate the
+endpoint.</p><p>To start, <code>git checkout phase-3</code>. The diff between <code>phase-2</code> and <code>phase-3</code>
+is significant. You should definitely check it out, but the short version
+is:</p><ul><li>We wrote a new app in Go to handle <code>/random/number</code></li><li>We refactored the Helm chart <em>heavily</em> to support multiple deployments</li><li>We added new functionality to the Helm chart to support Istio&rsquo;s traffic
+routing functionality</li></ul><p>We&rsquo;ll talk mostly about the Istio-specific changes from here on. To start,
+though, let&rsquo;s run our application as-is. It&rsquo;s currently configured to continue
+routing all traffic to the original Python application. Let&rsquo;s use <code>siege</code> to
+generate some traffic and ensure that&rsquo;s still the case using our observability
+stack. First, though, let&rsquo;s verify that we now have <em>two</em> deployments of our
+app:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ kubectl get deploy
+</span></span><span style=display:flex><span>NAME                           READY   UP-TO-DATE   AVAILABLE   AGE
+</span></span><span style=display:flex><span>rewrite-app-with-istio-blue    1/1     <span style=color:#ae81ff>1</span>            <span style=color:#ae81ff>1</span>           11s
+</span></span><span style=display:flex><span>rewrite-app-with-istio-green   1/1     <span style=color:#ae81ff>1</span>            <span style=color:#ae81ff>1</span>           11s
+</span></span><span style=display:flex><span>$ kubectl get deploy -o jsonpath<span style=color:#f92672>=</span><span style=color:#e6db74>&#39;{range .items[*]}{.spec.template.spec.containers[*].image}{&#34;\n&#34;}&#39;</span>
+</span></span><span style=display:flex><span>rewrite-app-with-istio:0d3d71f094fb4e2c556bdaef5f6ebf10ffc8666ef5f69a1e8ca92c9dd822dfbf
+</span></span><span style=display:flex><span>rewrite-app-with-istio-v2:59bda0b318308776108b01d841a62c99ea4d95cc65cb1e791d821c48e99cd1e3
+</span></span></code></pre></div><p>We can see above that one of our images has <code>-v2</code> in the name &ndash; that&rsquo;s our new
+Go implementation. Next, use <code>siege</code> and your observability tools to ensure no
+traffic is going to the Go implementation currently.</p><p><img src=/img/phase3-baseline-kiali.png alt="Kiali Dashboard Baseline"></p><p>This looks pretty much the same. Ok, now let&rsquo;s starting shifting some traffic!</p><h3 id=shift-1-of-traffic-to-go-service>Shift 1% of Traffic to Go Service</h3><p>We&rsquo;ll start with just 1% of traffic to our new Go service. To do this, edit the
+<code>helm/values.yaml</code> file and find the <code>weight</code> keys. Modify them so that the
+<code>weight</code> of the <code>green</code> subset is <code>1</code> and the <code>weight</code> of the <code>blue</code> subset is
+<code>99</code>:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#f92672>[</span>tyler@DESKTOP-NQJTPCO rewrite-app-with-istio<span style=color:#f92672>]</span>$ git diff
+</span></span><span style=display:flex><span>diff --git a/helm/values.yaml b/helm/values.yaml
+</span></span><span style=display:flex><span>index f926f96..ee5dd64 <span style=color:#ae81ff>100644</span>
+</span></span><span style=display:flex><span>--- a/helm/values.yaml
+</span></span><span style=display:flex><span>+++ b/helm/values.yaml
+</span></span><span style=display:flex><span>@@ -110,11 +110,11 @@ istioVirtualServices:
+</span></span><span style=display:flex><span>           - destination:
+</span></span><span style=display:flex><span>               host: rewrite-app-with-istio
+</span></span><span style=display:flex><span>               subset: green
+</span></span><span style=display:flex><span>-            weight: <span style=color:#ae81ff>0</span>
+</span></span><span style=display:flex><span>+            weight: <span style=color:#ae81ff>1</span>
+</span></span><span style=display:flex><span>           - destination:
+</span></span><span style=display:flex><span>               host: rewrite-app-with-istio
+</span></span><span style=display:flex><span>               subset: blue
+</span></span><span style=display:flex><span>-            weight: <span style=color:#ae81ff>100</span>
+</span></span><span style=display:flex><span>+            weight: <span style=color:#ae81ff>99</span>
+</span></span><span style=display:flex><span>       - name: <span style=color:#e6db74>&#34;rewrite-app-with-istio-route-v1&#34;</span>
+</span></span><span style=display:flex><span>         route:
+</span></span><span style=display:flex><span>           - destination:
+</span></span></code></pre></div><p>If you&rsquo;re using <code>skaffold dev</code>, it should pick this change up and automatically
+deploy it. Now, use <code>siege</code> again to generate traffic. This time, keep an eye
+on your observability data!</p><p><img src=/img/phase3-errors-kiali.png alt="Kiali Dashboard Baseline">
+<img src=/img/phase3-errors-grafana.png alt="Grafana Dashboard Baseline"></p><p>Oh no! We see an increased error rate! But we only shifted 1% of traffic, so
+why is our error rate so high?</p><p>First, shifting traffic isn&rsquo;t an exact science. But more importantly, we
+shifted traffic for an endpoint called from <code>/</code>, and <code>/</code> is calling that one
+endpoint multiple times. So, if <code>/</code> calls <code>/random/number</code> 30 times, and <em>any</em>
+of those gets routed to our new service, it will result in <code>/</code> having an error.
+So our 1% shift for <code>/random/number</code> has a >1% effect on <code>/</code> as a result.</p><h4 id=detour-the-magic-behind-shifting-traffic>Detour: The Magic Behind Shifting Traffic</h4><p>The &ldquo;magic&rdquo; of this process is Istio&rsquo;s combination of <code>VirtualService</code> and
+<code>DestinationRule</code>. An Istio <code>DestinationRule</code> lets us classify our service
+into multiple parts, or <code>subset</code>s. A <code>VirtualService</code> lets us describe how to
+route traffic for our service. Note that this leverages the normal Kubernetes
+<code>Service</code> for service discovery, but it doesn&rsquo;t actually <em>use</em> the Kubernetes
+<code>Service</code> for making decisions or delivering traffic. To get an idea for how
+these work, let&rsquo;s start with our <code>DestinationRule</code> manifest:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span>---
+</span></span><span style=display:flex><span><span style=color:#f92672>apiVersion</span>: <span style=color:#ae81ff>networking.istio.io/v1beta1</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>kind</span>: <span style=color:#ae81ff>DestinationRule</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#f92672>name</span>: <span style=color:#ae81ff>rewrite-app-with-istio</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#f92672>host</span>: <span style=color:#ae81ff>rewrite-app-with-istio</span>
+</span></span><span style=display:flex><span>  <span style=color:#f92672>subsets</span>:
+</span></span><span style=display:flex><span>  - <span style=color:#f92672>name</span>: <span style=color:#ae81ff>blue</span>
+</span></span><span style=display:flex><span>    <span style=color:#f92672>labels</span>:
+</span></span><span style=display:flex><span>      <span style=color:#f92672>color</span>: <span style=color:#ae81ff>blue</span>
+</span></span><span style=display:flex><span>  - <span style=color:#f92672>name</span>: <span style=color:#ae81ff>green</span>
+</span></span><span style=display:flex><span>    <span style=color:#f92672>labels</span>:
+</span></span><span style=display:flex><span>      <span style=color:#f92672>color</span>: <span style=color:#ae81ff>green</span>
+</span></span></code></pre></div><p>This manifest tells us that, for the &ldquo;host&rdquo; <code>rewrite-app-with-istio</code>, we have
+some &ldquo;subsets&rdquo;. So, what&rsquo;s a <code>host</code>, and what are <code>subsets</code>?</p><p>The <code>host</code> is, effectively, the Kubernetes service name to which these
+<code>subsets</code> will apply. The <code>subets</code> here are effectively label selectors for
+endpoints, or pods, within that service. One way we can see what these
+<code>subsets</code> are is by using <code>kubectl</code> to get the label selectors that the service
+uses, then find pods that match them and get <em>their</em> labels:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ kubectl get svc/rewrite-app-with-istio -o<span style=color:#f92672>=</span>jsonpath<span style=color:#f92672>=</span><span style=color:#e6db74>&#39;{.spec.selector}{&#34;\n\n&#34;}&#39;</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>{</span><span style=color:#e6db74>&#34;app.kubernetes.io/instance&#34;</span>:<span style=color:#e6db74>&#34;rewrite-app-with-istio&#34;</span>,<span style=color:#e6db74>&#34;app.kubernetes.io/name&#34;</span>:<span style=color:#e6db74>&#34;rewrite-app-with-istio&#34;</span><span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>$ kubectl get pod <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>    -l app.kubernetes.io/instance<span style=color:#f92672>=</span>rewrite-app-with-istio,app.kubernetes.io/name<span style=color:#f92672>=</span>rewrite-app-with-istio <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>    -o jsonpath<span style=color:#f92672>=</span><span style=color:#e6db74>&#39;{&#34;\n&#34;}{range .items[*]}{.metadata.name}: {&#34; labels: &#34;}{.metadata.labels}{&#34;\n\n&#34;}{end}&#39;</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>rewrite-app-with-istio-blue-8b5cdc96f-64wfm:  labels: <span style=color:#f92672>{</span><span style=color:#e6db74>&#34;app.kubernetes.io/instance&#34;</span>:<span style=color:#e6db74>&#34;rewrite-app-with-istio&#34;</span>,<span style=color:#e6db74>&#34;app.kubernetes.io/name&#34;</span>:<span style=color:#e6db74>&#34;rewrite-app-with-istio&#34;</span>,<span style=color:#e6db74>&#34;color&#34;</span>:<span style=color:#e6db74>&#34;blue&#34;</span>,<span style=color:#e6db74>&#34;pod-template-hash&#34;</span>:<span style=color:#e6db74>&#34;8b5cdc96f&#34;</span>,<span style=color:#e6db74>&#34;security.istio.io/tlsMode&#34;</span>:<span style=color:#e6db74>&#34;istio&#34;</span>,<span style=color:#e6db74>&#34;service.istio.io/canonical-name&#34;</span>:<span style=color:#e6db74>&#34;rewrite-app-with-istio&#34;</span>,<span style=color:#e6db74>&#34;service.istio.io/canonical-revision&#34;</span>:<span style=color:#e6db74>&#34;latest&#34;</span>,<span style=color:#e6db74>&#34;sidecar.istio.io/inject&#34;</span>:<span style=color:#e6db74>&#34;true&#34;</span><span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>rewrite-app-with-istio-green-7456c447c4-h4ct6:  labels: <span style=color:#f92672>{</span><span style=color:#e6db74>&#34;app.kubernetes.io/instance&#34;</span>:<span style=color:#e6db74>&#34;rewrite-app-with-istio&#34;</span>,<span style=color:#e6db74>&#34;app.kubernetes.io/name&#34;</span>:<span style=color:#e6db74>&#34;rewrite-app-with-istio&#34;</span>,<span style=color:#e6db74>&#34;color&#34;</span>:<span style=color:#e6db74>&#34;green&#34;</span>,<span style=color:#e6db74>&#34;pod-template-hash&#34;</span>:<span style=color:#e6db74>&#34;7456c447c4&#34;</span>,<span style=color:#e6db74>&#34;security.istio.io/tlsMode&#34;</span>:<span style=color:#e6db74>&#34;istio&#34;</span>,<span style=color:#e6db74>&#34;service.istio.io/canonical-name&#34;</span>:<span style=color:#e6db74>&#34;rewrite-app-with-istio&#34;</span>,<span style=color:#e6db74>&#34;service.istio.io/canonical-revision&#34;</span>:<span style=color:#e6db74>&#34;latest&#34;</span>,<span style=color:#e6db74>&#34;sidecar.istio.io/inject&#34;</span>:<span style=color:#e6db74>&#34;true&#34;</span><span style=color:#f92672>}</span>
+</span></span></code></pre></div><p>If we look carefully, we can see that our pods have a <code>color</code> label, and that
+for one pod it&rsquo;s <code>blue</code>, and for the other, it&rsquo;s <code>green</code>. This is how our
+<code>subsets</code> are found: first, lookup the <code>service</code> that matches the <code>host</code>; then,
+find pods that the service matches that <em>also</em> have <code>labels</code> that match our
+<code>DesinationRule</code>&rsquo;s <code>subsets</code> labels.</p><blockquote><p>It isn&rsquo;t <em>quite</em> based on the <code>service</code>, but it&rsquo;s close enough for
+illustration and example purposes.</p></blockquote><p>So, if we want to know &ldquo;which <code>subset</code> is the one with a <code>name</code> of <code>green</code>, we
+can use the service&rsquo;s <code>.spec.selector</code> plus the <code>subset</code>&rsquo;s <code>labels</code>:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ kubectl get pod <span style=color:#ae81ff>\
+</span></span></span><span style=display:flex><span><span style=color:#ae81ff></span>    -l app.kubernetes.io/instance<span style=color:#f92672>=</span>rewrite-app-with-istio,app.kubernetes.io/name<span style=color:#f92672>=</span>rewrite-app-with-istio,color<span style=color:#f92672>=</span>green
+</span></span><span style=display:flex><span>NAME                                            READY   STATUS    RESTARTS   AGE
+</span></span><span style=display:flex><span>rewrite-app-with-istio-green-7456c447c4-h4ct6   2/2     Running   <span style=color:#ae81ff>0</span>          25m
+</span></span></code></pre></div><p>Okay! Now that we know how subsets are identified, how do we use them? For
+that, we turn to the <code>VirtualService.</code> For our example, we have two: one that
+applies to our ingress <code>Gateway</code>; and one that applies to in-cluster traffic
+(or traffic natively within the mesh). We&rsquo;ll just look at the one for our
+in-cluster traffic, but the same principles apply to the one for our <code>Gateway</code>
+(albeit with the addition of a <code>.spec.gateways[]</code> to identify the <code>Gateway</code>s to
+which the VirtualService should be applied).</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#f92672>apiVersion</span>: <span style=color:#ae81ff>networking.istio.io/v1beta1</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>kind</span>: <span style=color:#ae81ff>VirtualService</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#f92672>labels</span>:
+</span></span><span style=display:flex><span>    <span style=color:#f92672>app.kubernetes.io/instance</span>: <span style=color:#ae81ff>rewrite-app-with-istio</span>
+</span></span><span style=display:flex><span>    <span style=color:#f92672>app.kubernetes.io/name</span>: <span style=color:#ae81ff>rewrite-app-with-istio</span>
+</span></span><span style=display:flex><span>    <span style=color:#f92672>app.kubernetes.io/version</span>: <span style=color:#ae81ff>0.0.1</span>
+</span></span><span style=display:flex><span>  <span style=color:#f92672>name</span>: <span style=color:#ae81ff>cluster</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#f92672>hosts</span>:
+</span></span><span style=display:flex><span>  - <span style=color:#ae81ff>rewrite-app-with-istio</span>
+</span></span><span style=display:flex><span>  <span style=color:#f92672>http</span>:
+</span></span><span style=display:flex><span>  - <span style=color:#f92672>match</span>:
+</span></span><span style=display:flex><span>    - <span style=color:#f92672>uri</span>:
+</span></span><span style=display:flex><span>        <span style=color:#f92672>prefix</span>: <span style=color:#ae81ff>/random/number</span>
+</span></span><span style=display:flex><span>    <span style=color:#f92672>name</span>: <span style=color:#ae81ff>rewrite-app-with-istio-route-v2</span>
+</span></span><span style=display:flex><span>    <span style=color:#f92672>route</span>:
+</span></span><span style=display:flex><span>    - <span style=color:#f92672>destination</span>:
+</span></span><span style=display:flex><span>        <span style=color:#f92672>host</span>: <span style=color:#ae81ff>rewrite-app-with-istio</span>
+</span></span><span style=display:flex><span>        <span style=color:#f92672>subset</span>: <span style=color:#ae81ff>green</span>
+</span></span><span style=display:flex><span>      <span style=color:#f92672>weight</span>: <span style=color:#ae81ff>1</span>
+</span></span><span style=display:flex><span>    - <span style=color:#f92672>destination</span>:
+</span></span><span style=display:flex><span>        <span style=color:#f92672>host</span>: <span style=color:#ae81ff>rewrite-app-with-istio</span>
+</span></span><span style=display:flex><span>        <span style=color:#f92672>subset</span>: <span style=color:#ae81ff>blue</span>
+</span></span><span style=display:flex><span>      <span style=color:#f92672>weight</span>: <span style=color:#ae81ff>99</span>
+</span></span><span style=display:flex><span>  - <span style=color:#f92672>name</span>: <span style=color:#ae81ff>rewrite-app-with-istio-route-v1</span>
+</span></span><span style=display:flex><span>    <span style=color:#f92672>route</span>:
+</span></span><span style=display:flex><span>    - <span style=color:#f92672>destination</span>:
+</span></span><span style=display:flex><span>        <span style=color:#f92672>host</span>: <span style=color:#ae81ff>rewrite-app-with-istio</span>
+</span></span><span style=display:flex><span>        <span style=color:#f92672>subset</span>: <span style=color:#ae81ff>blue</span>
+</span></span><span style=display:flex><span>      <span style=color:#f92672>weight</span>: <span style=color:#ae81ff>100</span>
+</span></span></code></pre></div><p>This shows us that we&rsquo;re applying our rules to anything that&rsquo;s talking to the
+<code>rewrite-app-with-istio</code> host. We&rsquo;re specifically creating <code>http</code> rules since
+our application is an HTTP-based application. These rules are evaluated in
+order. Our first rule matches a URI <code>prefix</code> of <code>/random/number</code>, which is the
+endpoint we&rsquo;re refactoring. It gives it a <code>name</code>, and then it has multiple
+possible ways to <code>route</code> the traffic: a <code>weight</code> of <code>1</code> (or 1%) will go to the
+<code>green</code> subset; a <code>weight</code> of <code>99</code> (or 99%) will go to the <code>blue</code> subset.
+Recall that our original Python implementation is in the <code>blue</code> <code>subset</code>
+(because the <code>subset</code> named <code>blue</code> in a <code>DestinationRule</code> for the same <code>host</code>
+looks for pods within the <code>host</code> service [<code>rewrite-app-with-istio</code>] with the
+label of <code>color: blue</code>, and the only pods matching that label are our Python
+application), while the Go implementation is in the <code>green</code> <code>subset</code>.</p><p>Our second <code>http</code> rule doesn&rsquo;t have a <code>match</code>, so it applies to everything.
+It&rsquo;s effectively a &ldquo;catch all.&rdquo; But because these rules are evaluated
+sequentially, it&rsquo;s only matching on requests that have a URI that <em>isn&rsquo;t</em>
+<code>/random/number</code>. Being aware of this sequential nature is crucial: if the
+&ldquo;catch all&rdquo; rule existed <em>before</em> the <code>/random/number</code> rule, then the rule for
+<code>/random/number</code> would never be evaluated.</p><p>There&rsquo;s a <em>lot</em> more power to be had in the combinations of <code>Gateway</code>,
+<code>DestinationRule</code>, and <code>VirtualService</code> and the many parameters that they each
+offer. Distributing traffic in this way is only the simplest of choices.</p><h3 id=fix-the-go-bug>Fix the Go Bug</h3><p>To fix our Go bug, we&rsquo;ll simply remove the artificial HTTP 500 response we were
+setting and fix the usage of <code>rand.Intn()</code>:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>diff --git a/v2/main.go b/v2/main.go
+</span></span><span style=display:flex><span>index d386dd3..4de51a2 <span style=color:#ae81ff>100644</span>
+</span></span><span style=display:flex><span>--- a/v2/main.go
+</span></span><span style=display:flex><span>+++ b/v2/main.go
+</span></span><span style=display:flex><span>@@ -30,10 +30,10 @@ func health<span style=color:#f92672>(</span>w http.ResponseWriter, req *http.Request<span style=color:#f92672>)</span> <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span> <span style=color:#f92672>}</span>
+</span></span><span style=display:flex><span> 
+</span></span><span style=display:flex><span> func randomNumber<span style=color:#f92672>(</span>w http.ResponseWriter, req *http.Request<span style=color:#f92672>)</span> <span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>-  w.WriteHeader<span style=color:#f92672>(</span>http.StatusInternalServerError<span style=color:#f92672>)</span>
+</span></span><span style=display:flex><span>+  randomNumber :<span style=color:#f92672>=</span> rand.Intn<span style=color:#f92672>(</span>9999<span style=color:#f92672>)</span>
+</span></span><span style=display:flex><span>   json.NewEncoder<span style=color:#f92672>(</span>w<span style=color:#f92672>)</span>.Encode<span style=color:#f92672>(</span>&amp;randomNumberResponse<span style=color:#f92672>{</span>
+</span></span><span style=display:flex><span>     Location: <span style=color:#e6db74>&#34;/random/number&#34;</span>,
+</span></span><span style=display:flex><span>-    Number: nil,
+</span></span><span style=display:flex><span>+    Number: randomNumber,
+</span></span><span style=display:flex><span>     EndpointVersion: <span style=color:#e6db74>&#34;v2&#34;</span>,
+</span></span><span style=display:flex><span>   <span style=color:#f92672>})</span>
+</span></span><span style=display:flex><span> <span style=color:#f92672>}</span>
+</span></span></code></pre></div><p>At this point, <code>skaffold</code> should pick your changes up and automatically deploy
+the new version of your Go app. So, let&rsquo;s give <code>siege</code> another try and observe
+the results!</p><p><img src=/img/phase3-1percent-kiali.png alt="Kiali Dashboard Baseline">
+<img src=/img/phase3-1percent-grafana.png alt="Grafana Dashboard Baseline"></p><p>Okay! Now we can clearly see <em>around</em> 1% of traffic is going to our new app
+we have no errors! Let&rsquo;s go ahead and push those ratios to 50/50.</p><h3 id=shift-50-of-traffic-to-go-service>Shift 50% of Traffic to Go Service</h3><p>Again, edit <code>helm/values.yaml</code> and change those weights to <code>50</code> and <code>50</code>:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>diff --git a/helm/values.yaml b/helm/values.yaml
+</span></span><span style=display:flex><span>index f926f96..9705033 <span style=color:#ae81ff>100644</span>
+</span></span><span style=display:flex><span>--- a/helm/values.yaml
+</span></span><span style=display:flex><span>+++ b/helm/values.yaml
+</span></span><span style=display:flex><span>@@ -110,11 +110,11 @@ istioVirtualServices:
+</span></span><span style=display:flex><span>           - destination:
+</span></span><span style=display:flex><span>               host: rewrite-app-with-istio
+</span></span><span style=display:flex><span>               subset: green
+</span></span><span style=display:flex><span>-            weight: <span style=color:#ae81ff>1</span>
+</span></span><span style=display:flex><span>+            weight: <span style=color:#ae81ff>50</span>
+</span></span><span style=display:flex><span>           - destination:
+</span></span><span style=display:flex><span>               host: rewrite-app-with-istio
+</span></span><span style=display:flex><span>               subset: blue
+</span></span><span style=display:flex><span>-            weight: <span style=color:#ae81ff>99</span>
+</span></span><span style=display:flex><span>+            weight: <span style=color:#ae81ff>50</span>
+</span></span><span style=display:flex><span>       - name: <span style=color:#e6db74>&#34;rewrite-app-with-istio-route-v1&#34;</span>
+</span></span><span style=display:flex><span>         route:
+</span></span><span style=display:flex><span>           - destination:
+</span></span></code></pre></div><p>Skaffold should pick this up and deploy it, so let&rsquo;s once again generate some
+traffic with <code>siege</code> and observe.</p><p><img src=/img/phase3-5050-kiali.png alt="Kiali Dashboard Baseline">
+<img src=/img/phase3-5050-grafana.png alt="Grafana Dashboard Baseline"></p><p>From this, we can see that all of our requests are still returning successfully
+and that around half of our requests are going to our new Go service! We can
+even see that performance is, in fact, better. We have roughly <em>half</em> the 99th
+percentile response time we had before, and the number of requests we&rsquo;ve been
+able to handle has increased around 50%. So, let&rsquo;s take our refactor the its
+logical conclusion and shift 100% of traffic to the Go service.</p><h3 id=shift-100-of-traffic-to-go-service>Shift 100% of Traffic to Go Service</h3><p>As before, we&rsquo;re just changing weights in <code>helm/values.yaml</code> to shift traffic
+around:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>diff --git a/helm/values.yaml b/helm/values.yaml
+</span></span><span style=display:flex><span>index f926f96..b4a72f7 <span style=color:#ae81ff>100644</span>
+</span></span><span style=display:flex><span>--- a/helm/values.yaml
+</span></span><span style=display:flex><span>+++ b/helm/values.yaml
+</span></span><span style=display:flex><span>@@ -110,11 +110,11 @@ istioVirtualServices:
+</span></span><span style=display:flex><span>           - destination:
+</span></span><span style=display:flex><span>               host: rewrite-app-with-istio
+</span></span><span style=display:flex><span>               subset: green
+</span></span><span style=display:flex><span>-            weight: <span style=color:#ae81ff>0</span>
+</span></span><span style=display:flex><span>+            weight: <span style=color:#ae81ff>100</span>
+</span></span><span style=display:flex><span>           - destination:
+</span></span><span style=display:flex><span>               host: rewrite-app-with-istio
+</span></span><span style=display:flex><span>               subset: blue
+</span></span><span style=display:flex><span>-            weight: <span style=color:#ae81ff>100</span>
+</span></span><span style=display:flex><span>+            weight: <span style=color:#ae81ff>0</span>
+</span></span><span style=display:flex><span>       - name: <span style=color:#e6db74>&#34;rewrite-app-with-istio-route-v1&#34;</span>
+</span></span><span style=display:flex><span>         route:
+</span></span><span style=display:flex><span>           - destination:
+</span></span></code></pre></div><blockquote><p>Remember that right now, our <code>green</code> deployment is our Go service, while
+<code>blue</code> is the old Python service.</p></blockquote><p>Let&rsquo;s use <code>siege</code> again to generate some artificial traffic and see what our
+refactor has given us! This time, though, I&rsquo;m going to reduce the duration of
+our siege to 1 minute &ndash; this is because the performance increased so much that
+I exhausted the ephemeral ports available on my machine (due to <code>TIME_WAIT</code>
+state)!</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ siege --concurrent<span style=color:#f92672>=</span><span style=color:#ae81ff>10</span> --benchmark --time<span style=color:#f92672>=</span>1M http://rewrite-app-with-istio.test/
+</span></span><span style=display:flex><span>HTTP/1.1 <span style=color:#ae81ff>200</span>     0.87 secs:    <span style=color:#ae81ff>2848</span> bytes <span style=color:#f92672>==</span>&gt; GET  /
+</span></span><span style=display:flex><span>HTTP/1.1 <span style=color:#ae81ff>200</span>     0.74 secs:    <span style=color:#ae81ff>2436</span> bytes <span style=color:#f92672>==</span>&gt; GET  /
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>&lt;SNIP&gt;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>HTTP/1.1 <span style=color:#ae81ff>200</span>     0.23 secs:     <span style=color:#ae81ff>745</span> bytes <span style=color:#f92672>==</span>&gt; GET  /
+</span></span><span style=display:flex><span>HTTP/1.1 <span style=color:#ae81ff>200</span>     0.58 secs:    <span style=color:#ae81ff>1896</span> bytes <span style=color:#f92672>==</span>&gt; GET  /
+</span></span><span style=display:flex><span>HTTP/1.1 <span style=color:#ae81ff>200</span>     0.94 secs:    <span style=color:#ae81ff>2985</span> bytes <span style=color:#f92672>==</span>&gt; GET  /
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Lifting the server siege...
+</span></span><span style=display:flex><span>Transactions:		        <span style=color:#ae81ff>1126</span> hits
+</span></span><span style=display:flex><span>Availability:		      100.00 %
+</span></span><span style=display:flex><span>Elapsed time:		       59.30 secs
+</span></span><span style=display:flex><span>Data transferred:	        1.83 MB
+</span></span><span style=display:flex><span>Response time:		        0.52 secs
+</span></span><span style=display:flex><span>Transaction rate:	       18.99 trans/sec
+</span></span><span style=display:flex><span>Throughput:		        0.03 MB/sec
+</span></span><span style=display:flex><span>Concurrency:		        9.93
+</span></span><span style=display:flex><span>Successful transactions:        <span style=color:#ae81ff>1126</span>
+</span></span><span style=display:flex><span>Failed transactions:	           <span style=color:#ae81ff>0</span>
+</span></span><span style=display:flex><span>Longest transaction:	        1.67
+</span></span><span style=display:flex><span>Shortest transaction:	        0.01
+</span></span></code></pre></div><p><img src=/img/phase3-100percent-kiali.png alt="Kiali Dashboard Baseline">
+<img src=/img/phase3-100percent-grafana.png alt="Grafana Dashboard Baseline"></p><p>From this, we can see that our refactored endpoint has <em>massively</em> improved
+our application&rsquo;s performance, even though we&rsquo;re sending everything through
+our initial Python code&rsquo;s <code>/</code> endpoint and only sending the <code>/random/number</code>
+endpoint to our new Go implementation.</p><h2 id=conclusion-and-final-thoughts>Conclusion and Final Thoughts</h2><p>Hopefully this shows how you can leverage Istio to incrementally shift traffic
+into a refactored application. While this example rewrote a single endpoint in
+an entirely new language, you could use the same techniques to refactor code in
+the same language, to rewrite the <em>entire</em> application, to introduce new
+features, and more. Istio is a powerful ally in the realm of operations: you
+get observability and operational control over your application stack; you get
+mutual TLS; you can inject failures (not covered); you can implement fault
+tolerance via circuit breaking (not covered); and much, much more. With the
+ability to shift traffic in increments as small as 1%, you can deploy new code,
+whether it be bug fixes, new features, refactoring, or even debugging builds
+directly to production, knowing that you&rsquo;re in control. Because let&rsquo;s face it,
+even the best staging environments rarely <em>truly</em> mirror production usage.</p><p>We didn&rsquo;t really talk much about tracing, but we <em>did</em> install
+[Jaeger][jaeger]. You can check it out by using the
+<code>istioctl dashboard jaeger</code> command. The default configuration &ldquo;traces&rdquo; around
+1% of requests, but that can be changed.</p><p>This was a long, dense post. It was a challenge to write. Writing the code
+was incredibly easy &ndash; after all, they&rsquo;re just random number generators with
+some artificial delay built-in. But trying to decide if I should show errors,
+how much detail I wanted to go into with exploring metrics (Grafana, Kiali, and
+even Jaeger is installed if you want to look at some very limited tracing) &ndash;
+that was difficult. I also had to decide if I would simply refactor the
+existing code or rewrite it in an entirely new language. Should I include
+details on the prerequisites, or should I just skip to the meat of the thing?
+Ultimately, I wanted to create something that (hopefully) others could follow
+if they started out from a brand new OS install. I hope I found the right
+balance in the end.</p><p>If you found this helpful, interesting, or just the literal worst of all things,
+I&rsquo;d love to hear your feedback <a href=https://twitter.com/supertylerc>on Twitter</a>.</p></article></div><div class="meta article-card"><div class=row><span class=label><svg xmlns="http://www.w3.org/2000/svg" class="ionicon" viewBox="0 0 512 512"><path d="M32 456a24 24 0 0024 24h4e2a24 24 0 0024-24V176H32zm320-244a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm0 80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm-80-80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm0 80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm0 80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm-80-80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm0 80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm-80-80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm0 80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zM456 64h-55.92V32h-48v32H159.92V32h-48v32H56A23.8 23.8.0 0032 87.77V144h448V87.77A23.8 23.8.0 00456 64z"/></svg>Published At</span><time>2022-03-25 00:00 UTC</time></div><div class=row><span class=label><svg xmlns="http://www.w3.org/2000/svg" class="ionicon" viewBox="0 0 512 512"><path d="M288 16 0 304l176 176 288-288V16zm80 128a32 32 0 1132-32 32 32 0 01-32 32z"/><path d="M480 64v144L216.9 471.1 242 496l270-272V64h-32z"/></svg>Tagged with</span><ul class=tags><li class=hashed-tag><a href=https://blog.itsalwaysthe.network/tags/kubernetes>kubernetes</a></li><li class=hashed-tag><a href=https://blog.itsalwaysthe.network/tags/go>go</a></li><li class=hashed-tag><a href=https://blog.itsalwaysthe.network/tags/istio>istio</a></li></ul></div><div class="row social-share"><span class=label><svg xmlns="http://www.w3.org/2000/svg" class="ionicon" viewBox="0 0 512 512"><path d="M272 176v161h-32V176H92a12 12 0 00-12 12v280a12 12 0 0012 12h328a12 12 0 0012-12V188a12 12 0 00-12-12zm0-83.37 64 64L358.63 134 256 31.37 153.37 134 176 156.63l64-64V176h32V92.63z"/></svg>Share with</span>
+<a target=_blank title="share to reddit" rel="noopener noreferrer" aria-label="share Refactoring Apps Safely with Istio on reddit" href="https://reddit.com/submit?url=https%3a%2f%2fblog.itsalwaysthe.network%2fposts%2frefactor-app-with-istio%2f&title=Refactoring%20Apps%20Safely%20with%20Istio"><svg xmlns="http://www.w3.org/2000/svg" class="ionicon" viewBox="0 0 512 512" fill="currentcolor" stroke="currentcolor" stroke-width="10"><path d="M324 256a36 36 0 1036 36 36 36 0 00-36-36z"/><circle cx="188" cy="292" r="36" transform="rotate(-22.5 187.997 291.992)"/><path d="M496 253.77c0-31.19-25.14-56.56-56-56.56a55.72 55.72.0 00-35.61 12.86c-35-23.77-80.78-38.32-129.65-41.27l22-79 66.41 13.2c1.9 26.48 24 47.49 50.65 47.49 28 0 50.78-23 50.78-51.21S441 48 413 48c-19.53.0-36.31 11.19-44.85 28.77l-90-17.89-31.1 109.52-4.63.13c-50.63 2.21-98.34 16.93-134.77 41.53A55.38 55.38.0 0072 197.21c-30.89.0-56 25.37-56 56.56a56.43 56.43.0 0028.11 49.06 98.65 98.65.0 00-.89 13.34c.11 39.74 22.49 77 63 105C146.36 448.77 199.51 464 256 464s109.76-15.23 149.83-42.89c40.53-28 62.85-65.27 62.85-105.06a109.32 109.32.0 00-.84-13.3A56.32 56.32.0 00496 253.77zM414 75a24 24 0 11-24 24 24 24 0 0124-24zM42.72 253.77a29.6 29.6.0 0129.42-29.71 29 29 0 0113.62 3.43c-15.5 14.41-26.93 30.41-34.07 47.68a30.23 30.23.0 01-8.97-21.4zM390.82 399c-35.74 24.59-83.6 38.14-134.77 38.14S157 423.61 121.29 399c-33-22.79-51.24-52.26-51.24-83A78.5 78.5.0 0175 288.72c5.68-15.74 16.16-30.48 31.15-43.79a155.17 155.17.0 0114.76-11.53l.3-.21.24-.17c35.72-24.52 83.52-38 134.61-38s98.9 13.51 134.62 38l.23.17.34.25A156.57 156.57.0 01406 244.92c15 13.32 25.48 28.05 31.16 43.81a85.44 85.44.0 014.31 17.67 77.29 77.29.0 01.6 9.65c-.01 30.72-18.21 60.19-51.25 82.95zm69.6-123.92c-7.13-17.28-18.56-33.29-34.07-47.72A29.09 29.09.0 01440 224a29.59 29.59.0 0129.41 29.71 30.07 30.07.0 01-8.99 21.39z"/><path d="M323.23 362.22c-.25.25-25.56 26.07-67.15 26.27-42-.2-66.28-25.23-67.31-26.27a4.14 4.14.0 00-5.83.0l-13.7 13.47a4.15 4.15.0 000 5.89c3.4 3.4 34.7 34.23 86.78 34.45 51.94-.22 83.38-31.05 86.78-34.45a4.16 4.16.0 000-5.9l-13.71-13.47a4.13 4.13.0 00-5.81.0z"/></svg></a><a target=_blank title="share to twitter" rel="noopener noreferrer" aria-label="share Refactoring Apps Safely with Istio on twitter" href="https://twitter.com/intent/tweet/?text=Refactoring%20Apps%20Safely%20with%20Istio&url=https%3a%2f%2fblog.itsalwaysthe.network%2fposts%2frefactor-app-with-istio%2f&hashtags=kubernetes%2cgo%2cistio"><svg class="ionicon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="fill:none" stroke="currentcolor" stroke-width="2"><path d="M23 3a10.9 10.9.0 01-3.14 1.53 4.48 4.48.0 00-7.86 3v1A10.66 10.66.0 013 4s-4 9 5 13a11.64 11.64.0 01-7 2c9 5 20 0 20-11.5a4.5 4.5.0 00-.08-.83A7.72 7.72.0 0023 3z"/></svg></a><a target=_blank title="share to facebook" rel="noopener noreferrer" aria-label="share Refactoring Apps Safely with Istio on facebook" href="https://facebook.com/sharer/sharer.php?u=https%3a%2f%2fblog.itsalwaysthe.network%2fposts%2frefactor-app-with-istio%2f"><svg xmlns="http://www.w3.org/2000/svg" class="ionicon" viewBox="0 0 24 24" style="fill:none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-facebook"><path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/></svg></a></div></div></div></main><footer id=footer><div class="container has-padding is-flex"><ul class=links><li><a rel=nofollow target=_blank href=https://twitter.com/supertylerc title=Twitter>Twitter</a></li><li><a class="nav-link navbar-button" href=https://blog.itsalwaysthe.network/index.xml type=application/rss+xml>RSS</a></li><li><a rel=nofollow target=_blank href=https://github.com/wayjam/hugo-theme-fluency title="using Hugo theme fluency">Theme Fluency</a></li><li><a rel=nofollow target=_blank href=https://gohugo.io title="Built with hugo">Built with Hugo</a></li></ul><div class=copyright>&copy; 2022 It's Always the Network</div></div></footer><script>window.FluencyCopyIcon="\n\n\n\n\n\n\n\u003csvg xmlns=\u0027http://www.w3.org/2000/svg\u0027 class=\u0027ionicon\u0027 viewBox=\u00270 0 512 512\u0027\u003e\u003crect x=\u0027128\u0027 y=\u0027128\u0027 width=\u0027336\u0027 height=\u0027336\u0027 rx=\u002757\u0027 ry=\u002757\u0027 stroke-linejoin=\u0027round\u0027 class=\u0027ionicon-fill-none ionicon-stroke-width\u0027/\u003e\u003cpath d=\u0027M383.5 128l.5-24a56.16 56.16 0 00-56-56H112a64.19 64.19 0 00-64 64v216a56.16 56.16 0 0056 56h24\u0027 stroke-linecap=\u0027round\u0027 stroke-linejoin=\u0027round\u0027 class=\u0027ionicon-fill-none ionicon-stroke-width\u0027/\u003e\u003c/svg\u003e\n\n\n\n\n\n\n\n\n\n\n"</script><script defer src=https://blog.itsalwaysthe.network/js/main.min.b62162eb64232ce1a1cc62740790672a39ba8c30b022a93fe4c86cef053ba08f.js integrity="sha256-tiFi62QjLOGhzGJ0B5BnKjm6jDCwIqk/5Mhs7wU7oI8=" crossorigin=anonymous async></script><noscript><style type=text/css>#theme-selector-button{display:none}</style></noscript></body></html>
