@@ -644,7 +644,7 @@ This manifest tells us that, for the "host" `rewrite-app-with-istio`, we have
 some "subsets".  So, what's a `host`, and what are `subsets`?
 
 The `host` is, effectively, the Kubernetes service name to which these
-`subsets` will apply.  The `subets` here are effectively label selectors for
+`subsets` will apply.  The `subsets` here are effectively label selectors for
 endpoints, or pods, within that service.  One way we can see what these
 `subsets` are is by using `kubectl` to get the label selectors that the service
 uses, then find pods that match them and get _their_ labels:
