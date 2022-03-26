@@ -22,15 +22,15 @@ necessarily solved by rewriting the logic in Go), but instead an issue so
 embedded in an existing codebase (such as the libraries it uses) that
 rewriting portions of the codebase from scratch would be easier, safer, and
 just plain &ldquo;better&rdquo; than trying to fix the original code.</p></blockquote><h2 id=prerequisites>Prerequisites</h2><p>Before we can really get going, we need to know what technologies we&rsquo;re using.
-We already spoiled the biggest part of the stack: [Istio][istio]. But we also
+We already spoiled the biggest part of the stack: <a href=https://istio.io/>Istio</a>. But we also
 need somewhere to run our application. Since we&rsquo;re using Istio, we&rsquo;ll also be
-using Kubernetes. To run Kubernetes, we&rsquo;ll use [minikube][minikube]. To
-manage our service deployment and configuration, we&rsquo;ll use [helm][helm].
-Finally, we&rsquo;ll use [skaffold][skaffold] for a slightly faster feedback loop.
+using Kubernetes. To run Kubernetes, we&rsquo;ll use <a href=https://minikube.sigs.k8s.io/>minikube</a>. To
+manage our service deployment and configuration, we&rsquo;ll use <a href=https://helm.sh/>helm</a>.
+Finally, we&rsquo;ll use <a href=https://skaffold.dev/>skaffold</a> for a slightly faster feedback loop.
 After all, we want continuous development!</p><h3 id=podmandocker>Podman/Docker</h3><p>Before anything else, we want to be able to build containers. Docker is
 falling out of favor in some circles (such as Kubernetes,
-[where it has been deprecated as a container runtime][docker-deprecation]), so
-I&rsquo;ve opted to use [podman][podman] for my local container needs. If you&rsquo;re
+<a href=https://kubernetes.io/blog/2022/01/07/kubernetes-is-moving-on-from-dockershim/>where it has been deprecated as a container runtime</a>), so
+I&rsquo;ve opted to use <a href=https://podman.io>podman</a> for my local container needs. If you&rsquo;re
 running Fedora (I am), you can install <code>podman</code>:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ sudo dnf update -y
 </span></span><span style=display:flex><span>$ sudo dnf install -y podman
 </span></span></code></pre></div><p>For other operating systems, see the <a href=https://podman.io/getting-started/installation>official instructions</a>.
@@ -334,7 +334,7 @@ Go implementation. Next, use <code>siege</code> and your observability tools to 
 traffic is going to the Go implementation currently.</p><p><img src=/img/phase3-baseline-kiali.png alt="Kiali Dashboard Baseline"></p><p>This looks pretty much the same. Ok, now let&rsquo;s starting shifting some traffic!</p><h3 id=shift-1-of-traffic-to-go-service>Shift 1% of Traffic to Go Service</h3><p>We&rsquo;ll start with just 1% of traffic to our new Go service. To do this, edit the
 <code>helm/values.yaml</code> file and find the <code>weight</code> keys. Modify them so that the
 <code>weight</code> of the <code>green</code> subset is <code>1</code> and the <code>weight</code> of the <code>blue</code> subset is
-<code>99</code>:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#f92672>[</span>tyler@DESKTOP-NQJTPCO rewrite-app-with-istio<span style=color:#f92672>]</span>$ git diff
+<code>99</code>:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ git diff
 </span></span><span style=display:flex><span>diff --git a/helm/values.yaml b/helm/values.yaml
 </span></span><span style=display:flex><span>index f926f96..ee5dd64 <span style=color:#ae81ff>100644</span>
 </span></span><span style=display:flex><span>--- a/helm/values.yaml
@@ -571,7 +571,7 @@ ability to shift traffic in increments as small as 1%, you can deploy new code,
 whether it be bug fixes, new features, refactoring, or even debugging builds
 directly to production, knowing that you&rsquo;re in control. Because let&rsquo;s face it,
 even the best staging environments rarely <em>truly</em> mirror production usage.</p><p>We didn&rsquo;t really talk much about tracing, but we <em>did</em> install
-[Jaeger][jaeger]. You can check it out by using the
+<a href=https://www.jaegertracing.io/>Jaeger</a>. You can check it out by using the
 <code>istioctl dashboard jaeger</code> command. The default configuration &ldquo;traces&rdquo; around
 1% of requests, but that can be changed.</p><p>This was a long, dense post. It was a challenge to write. Writing the code
 was incredibly easy &ndash; after all, they&rsquo;re just random number generators with
