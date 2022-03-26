@@ -576,7 +576,7 @@ We'll start with just 1% of traffic to our new Go service.  To do this, edit the
 `99`:
 
 ```bash
-[tyler@DESKTOP-NQJTPCO rewrite-app-with-istio]$ git diff
+$ git diff
 diff --git a/helm/values.yaml b/helm/values.yaml
 index f926f96..ee5dd64 100644
 --- a/helm/values.yaml
@@ -932,3 +932,10 @@ I'd love to hear your feedback [on Twitter][twitter].
 [docker-install]: https://docs.docker.com/get-docker/
 [kubectl-install]: https://kubernetes.io/docs/tasks/tools/
 [twitter]: https://twitter.com/supertylerc
+[istio]: https://istio.io/
+[minikube]: https://minikube.sigs.k8s.io/
+[skaffold]: https://skaffold.dev/
+[helm]: https://helm.sh/
+[jaeger]: https://www.jaegertracing.io/
+[podman]: https://podman.io
+[docker-deprecation]: https://kubernetes.io/blog/2022/01/07/kubernetes-is-moving-on-from-dockershim/
