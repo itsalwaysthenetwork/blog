@@ -1,0 +1,369 @@
+<!doctype html><html lang=en-us prefix="og: http://ogp.me/ns# fb: http://ogp.me/ns/fb#"><head lang=en-us><meta charset=utf-8><meta http-equiv=x-ua-compatible content="IE=edge,chrome=1"><meta name=HandheldFriendly content="True"><meta name=MobileOptimized content="320"><meta name=viewport content="width=device-width,initial-scale=1"><meta name=color-scheme content="dark light"><meta name=description content="Part One of this series comparing Go and Python can be found here.
+In Part One, I covered some of the differences between Python and Go when it comes to packaging and looping. This time, I want to cover a (slightly?) more advanced topic: blocking vs. non-blocking HTTP calls. To do this, we&rsquo;ll write the same application in both Python and Go. This tiny demo application will retrieve the names of the original 150 Pokemon from a public API."><meta name=author content><meta name=keywords content="python,go,series,series-go-vs-python"><title>Comparing the Basics of Go and Python for New Programmers -- Part 2 | It's Always the Network</title><link rel=canonical href=https://blog.itsalwaysthe.network/posts/comparing-go-and-python-part-2/><meta property="og:type" content="article"><meta property="og:description" content="Part One of this series comparing Go and Python can be found here.
+In Part One, I covered some of the differences between Python and Go when it comes to packaging and looping. This time, I want to cover a (slightly?) more advanced topic: blocking vs. non-blocking HTTP calls. To do this, we&rsquo;ll write the same application in both Python and Go. This tiny demo application will retrieve the names of the original 150 Pokemon from a public API."><meta property="og:title" content="Comparing the Basics of Go and Python for New Programmers -- Part 2"><meta property="og:site_name" content="It's Always the Network"><meta property="og:image:type" content="image/jpeg"><meta property="og:url" content="https://blog.itsalwaysthe.network/posts/comparing-go-and-python-part-2/"><meta property="og:locale" content="en-us"><meta property="article:published_time" content="2022-04-14"><meta property="article:modified_time" content="2022-04-14"><meta property="article:tag" content="python"><meta property="article:tag" content="go"><meta property="article:tag" content="series"><meta property="article:tag" content="series-go-vs-python"><meta name=twitter:card content="summary"><meta name=twitter:title content="Comparing the Basics of Go and Python for New Programmers -- Part 2 | It's Always the Network"><meta name=twitter:description content="Part One of this series comparing Go and Python can be found here.
+In Part One, I covered some of the differences between Python and Go when it comes to packaging and looping. This time, I want to cover a (slightly?) more advanced topic: blocking vs. non-blocking HTTP calls. To do this, we&rsquo;ll write the same application in both Python and Go. This tiny demo application will retrieve the names of the original 150 Pokemon from a public API."><meta name=twitter:domain content="https://blog.itsalwaysthe.network/posts/comparing-go-and-python-part-2/"><link rel=icon href=https://blog.itsalwaysthe.network/favicon.ico><link rel=stylesheet href=//cdn.jsdelivr.net/npm/modern-normalize@1.0.0/modern-normalize.min.css><link rel=stylesheet href=https://blog.itsalwaysthe.network/style.min.c960935d8d4f104620049788ddc6687727237973b8603ffd305918dd3c5e9535.css integrity="sha256-yWCTXY1PEEYgBJeI3cZodycjeXO4YD/9MFkY3TxelTU=" rel="preload stylesheet" as=style></head><body><script>const currentTheme=window.localStorage.getItem("theme");currentTheme==="dark"?document.body.classList.toggle("theme-dark"):currentTheme=="light"&&document.body.classList.toggle("theme-light")</script><header id=header><div class=row><div class="container has-padding nav"><button id=navbar-toggler class=navbar-button aria-hidden=true><svg xmlns="http://www.w3.org/2000/svg" class="ionicon" viewBox="0 0 512 512"><path d="M64 384h384v-42.67H64zm0-106.67h384v-42.66H64zM64 128v42.67h384V128z"/></svg></button><div class=navbar-brand><a class="logo navbar-button" href=https://blog.itsalwaysthe.network/ title="It's Always the Network"><span>It's Always the Network</span></a></div><nav class=navbar role=navigation><ul><li class="nav-bar-item active"><a class="nav-link navbar-button" href=/posts/ title=posts><span>posts</span></a></li><li class=nav-bar-item><a class="nav-link navbar-button" href=/tags/ title=tags><span>tags</span></a></li></ul></nav><div class=theme-selector><button class="button is-text" id=theme-selector-button title="toggle theme">
+<span class="label icon"><svg xmlns="http://www.w3.org/2000/svg" class="ionicon" viewBox="0 0 512 512"><path d="M256 32C132.29 32 32 132.29 32 256s100.29 224 224 224 224-100.29 224-224S379.71 32 256 32zM128.72 383.28A180 180 0 01256 76v360a178.82 178.82.0 01-127.28-52.72z"/></svg></span></button></div></div><div class="container has-padding"><div class=breadcrumb><ol class=breadcrumb-nav><li><a href=https://blog.itsalwaysthe.network/>Home</a></li><li><a href=https://blog.itsalwaysthe.network/posts/>Posts</a></li><li class=active><a href=https://blog.itsalwaysthe.network/posts/comparing-go-and-python-part-2/>Comparing the Basics of Go and Python for New Programmers -- Part 2</a></li></ol></div></div></div></header><main id=main><div class="container has-padding"><div class="article-card post single"><h1 class=title>Comparing the Basics of Go and Python for New Programmers -- Part 2</h1><div class=post-info><span><svg xmlns="http://www.w3.org/2000/svg" class="ionicon" viewBox="0 0 512 512"><path d="M32 456a24 24 0 0024 24h4e2a24 24 0 0024-24V176H32zm320-244a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm0 80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm-80-80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm0 80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm0 80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm-80-80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm0 80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm-80-80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm0 80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zM456 64h-55.92V32h-48v32H159.92V32h-48v32H56A23.8 23.8.0 0032 87.77V144h448V87.77A23.8 23.8.0 00456 64z"/></svg><time datetime=2022-04-14T00:00:00Z class=date>April 14, 2022</time></span>
+<span><svg xmlns="http://www.w3.org/2000/svg" class="ionicon" viewBox="0 0 512 512"><path d="M256 48C141.13 48 48 141.13 48 256c0 114.69 93.32 208 208 208 114.86.0 208-93.14 208-208 0-114.69-93.31-208-208-208zm108 240H244a4 4 0 01-4-4V116a4 4 0 014-4h24a4 4 0 014 4v140h92a4 4 0 014 4v24a4 4 0 01-4 4z"/></svg>16 mins to read</span>
+<span>posts</span></div><article class="post-entry content"><p>Part One of this series comparing <a href=/posts/comparing-go-and-python/>Go and Python can be found here</a>.</p><p>In Part One, I covered some of the differences between Python and Go when it
+comes to packaging and looping. This time, I want to cover a (slightly?) more
+advanced topic: blocking vs. non-blocking HTTP calls. To do this, we&rsquo;ll write
+the same application in both Python and Go. This tiny demo application will
+retrieve the names of the original 150 Pokemon from a public API.</p><blockquote><p>Technically, Mew is #151 and is &ldquo;original.&rdquo; But we&rsquo;re going to leave Mew
+out today.</p></blockquote><h2 id=getting-pokemon-one-at-a-time>Getting Pokemon One at a Time</h2><p>First, we&rsquo;ll write our application to make its API calls in serial. This is
+also known as &ldquo;blocking&rdquo; code: the code cannot continue until the previous
+call is completed because it&rsquo;s waiting for network I/O.</p><h3 id=python>Python</h3><p>For our Python implementation, we&rsquo;ll ues the very popular (and with good
+reason) <a href=https://docs.python-requests.org/>requests</a> library. I don&rsquo;t want to fight with virtualenv,
+so I&rsquo;m going to use this <code>Dockerfile</code>:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-docker data-lang=docker><span style=display:flex><span><span style=color:#66d9ef>FROM</span><span style=color:#e6db74> python:3.8-slim-buster</span><span style=color:#960050;background-color:#1e0010>
+</span></span></span><span style=display:flex><span><span style=color:#960050;background-color:#1e0010>
+</span></span></span><span style=display:flex><span><span style=color:#960050;background-color:#1e0010></span><span style=color:#66d9ef>WORKDIR</span><span style=color:#e6db74> /app</span><span style=color:#960050;background-color:#1e0010>
+</span></span></span><span style=display:flex><span><span style=color:#960050;background-color:#1e0010></span><span style=color:#66d9ef>RUN</span> pip3 install requests<span style=color:#960050;background-color:#1e0010>
+</span></span></span><span style=display:flex><span><span style=color:#960050;background-color:#1e0010></span><span style=color:#66d9ef>COPY</span> app.py .<span style=color:#960050;background-color:#1e0010>
+</span></span></span><span style=display:flex><span><span style=color:#960050;background-color:#1e0010>
+</span></span></span><span style=display:flex><span><span style=color:#960050;background-color:#1e0010></span><span style=color:#66d9ef>CMD</span> [<span style=color:#e6db74>&#34;python3&#34;</span>, <span style=color:#e6db74>&#34;app.py&#34;</span>]<span style=color:#960050;background-color:#1e0010>
+</span></span></span></code></pre></div><p>Our Python code for this is:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#75715e>#!/usr/bin/env python</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>import</span> requests
+</span></span><span style=display:flex><span><span style=color:#f92672>import</span> time
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>def</span> <span style=color:#a6e22e>main</span>():
+</span></span><span style=display:flex><span>    <span style=color:#75715e># Loop from 1 to 150</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>for</span> number <span style=color:#f92672>in</span> range(<span style=color:#ae81ff>1</span>, <span style=color:#ae81ff>151</span>):
+</span></span><span style=display:flex><span>        pokemon_url <span style=color:#f92672>=</span> <span style=color:#e6db74>f</span><span style=color:#e6db74>&#39;https://pokeapi.co/api/v2/pokemon/</span><span style=color:#e6db74>{</span>number<span style=color:#e6db74>}</span><span style=color:#e6db74>&#39;</span>
+</span></span><span style=display:flex><span>        <span style=color:#75715e># Perform an HTTP GET on the Pokemon API</span>
+</span></span><span style=display:flex><span>        response <span style=color:#f92672>=</span> requests<span style=color:#f92672>.</span>get(pokemon_url)
+</span></span><span style=display:flex><span>        <span style=color:#75715e># Parse the response as JSON, get the &#34;name&#34; key, and print it</span>
+</span></span><span style=display:flex><span>        print(response<span style=color:#f92672>.</span>json()[<span style=color:#e6db74>&#34;name&#34;</span>])
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>if</span> __name__ <span style=color:#f92672>==</span> <span style=color:#e6db74>&#34;__main__&#34;</span>:
+</span></span><span style=display:flex><span>    start_time <span style=color:#f92672>=</span> time<span style=color:#f92672>.</span>time()
+</span></span><span style=display:flex><span>    main()
+</span></span><span style=display:flex><span>    print(<span style=color:#e6db74>&#34;Total Time: </span><span style=color:#e6db74>%s</span><span style=color:#e6db74> Seconds&#34;</span> <span style=color:#f92672>%</span> (time<span style=color:#f92672>.</span>time() <span style=color:#f92672>-</span> start_time))
+</span></span></code></pre></div><p>We can build and run it with:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ podman build -t blog .
+</span></span><span style=display:flex><span>$ podman run --rm -it blog
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>&lt;SNIP -- A whole lotta Pokemon!&gt;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Total Time: 25.06453824043274 Seconds
+</span></span></code></pre></div><blockquote><p>Note: you can replace <code>podman</code> with <code>docker</code> if you&rsquo;re a Docker user.</p></blockquote><p>Okay, 25 seconds to get all of the Pokemon. Well, all of the ones that matter,
+anyway.</p><blockquote><p>I will fight you. There are only 150 Pokemon. Plus Mew.</p></blockquote><h3 id=go>Go</h3><p>Let&rsquo;s have a look at doing the same thing in Go:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go><span style=display:flex><span><span style=color:#f92672>package</span> <span style=color:#a6e22e>main</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#f92672>import</span> (
+</span></span><span style=display:flex><span>	<span style=color:#e6db74>&#34;encoding/json&#34;</span>
+</span></span><span style=display:flex><span>	<span style=color:#e6db74>&#34;fmt&#34;</span>
+</span></span><span style=display:flex><span>	<span style=color:#e6db74>&#34;io/ioutil&#34;</span>
+</span></span><span style=display:flex><span>	<span style=color:#e6db74>&#34;strconv&#34;</span>
+</span></span><span style=display:flex><span>	<span style=color:#e6db74>&#34;net/http&#34;</span>
+</span></span><span style=display:flex><span>	<span style=color:#e6db74>&#34;time&#34;</span>
+</span></span><span style=display:flex><span>)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>func</span> <span style=color:#a6e22e>main</span>() {
+</span></span><span style=display:flex><span>	<span style=color:#a6e22e>startTime</span> <span style=color:#f92672>:=</span> <span style=color:#a6e22e>time</span>.<span style=color:#a6e22e>Now</span>()
+</span></span><span style=display:flex><span>	<span style=color:#75715e>// Create an http.Client with a 2 second timeout, otherwise it will
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>	<span style=color:#75715e>// never timeout
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>	<span style=color:#a6e22e>client</span> <span style=color:#f92672>:=</span> <span style=color:#a6e22e>http</span>.<span style=color:#a6e22e>Client</span>{
+</span></span><span style=display:flex><span>		<span style=color:#a6e22e>Timeout</span>: <span style=color:#a6e22e>time</span>.<span style=color:#a6e22e>Second</span> <span style=color:#f92672>*</span> <span style=color:#ae81ff>2</span>,
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=color:#75715e>// Loop from 1 to 150
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>	<span style=color:#66d9ef>for</span> <span style=color:#a6e22e>i</span> <span style=color:#f92672>:=</span> <span style=color:#ae81ff>1</span>; <span style=color:#a6e22e>i</span> &lt; <span style=color:#ae81ff>151</span>; <span style=color:#a6e22e>i</span><span style=color:#f92672>++</span> {
+</span></span><span style=display:flex><span>		<span style=color:#a6e22e>pokemon_url</span> <span style=color:#f92672>:=</span> <span style=color:#e6db74>&#34;https://pokeapi.co/api/v2/pokemon/&#34;</span> <span style=color:#f92672>+</span> <span style=color:#a6e22e>strconv</span>.<span style=color:#a6e22e>Itoa</span>(<span style=color:#a6e22e>i</span>)
+</span></span><span style=display:flex><span>		<span style=color:#75715e>// Create a map to unmarshal (parse) JSON into
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>		<span style=color:#75715e>// We create a map that contains type `interface{}` so we don&#39;t
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>		<span style=color:#75715e>// have to define the structure of the JSON
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>		<span style=color:#66d9ef>var</span> <span style=color:#a6e22e>pokemon</span> <span style=color:#66d9ef>map</span>[<span style=color:#66d9ef>string</span>]<span style=color:#66d9ef>interface</span>{}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>		<span style=color:#75715e>// Perform an HTTP GET on the Pokemon API
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>		<span style=color:#a6e22e>res</span>, <span style=color:#a6e22e>_</span> <span style=color:#f92672>:=</span> <span style=color:#a6e22e>client</span>.<span style=color:#a6e22e>Get</span>(<span style=color:#a6e22e>pokemon_url</span>)
+</span></span><span style=display:flex><span>		<span style=color:#66d9ef>defer</span> <span style=color:#a6e22e>res</span>.<span style=color:#a6e22e>Body</span>.<span style=color:#a6e22e>Close</span>()
+</span></span><span style=display:flex><span>	
+</span></span><span style=display:flex><span>		<span style=color:#75715e>// Read the response and unmarshal (parse) it into our map
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>		<span style=color:#a6e22e>body</span>, <span style=color:#a6e22e>_</span> <span style=color:#f92672>:=</span> <span style=color:#a6e22e>ioutil</span>.<span style=color:#a6e22e>ReadAll</span>(<span style=color:#a6e22e>res</span>.<span style=color:#a6e22e>Body</span>)
+</span></span><span style=display:flex><span>		<span style=color:#a6e22e>json</span>.<span style=color:#a6e22e>Unmarshal</span>(<span style=color:#a6e22e>body</span>, <span style=color:#f92672>&amp;</span><span style=color:#a6e22e>pokemon</span>)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>		<span style=color:#a6e22e>fmt</span>.<span style=color:#a6e22e>Println</span>(<span style=color:#a6e22e>pokemon</span>[<span style=color:#e6db74>&#34;name&#34;</span>])
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=color:#a6e22e>fmt</span>.<span style=color:#a6e22e>Printf</span>(<span style=color:#e6db74>&#34;Total Time: %s\n&#34;</span>, <span style=color:#a6e22e>time</span>.<span style=color:#a6e22e>Since</span>(<span style=color:#a6e22e>startTime</span>))
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>And then, let&rsquo;s run it:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ go run main.go
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>&lt;SNIP -- A whole lotta Pokemon!&gt;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Total Time: 6.877103447s
+</span></span></code></pre></div><p>Both of these applications do roughly the same thing: they iterate over a
+sequence of numbers from <code>1</code> to <code>150</code>, using those numbers to perform an
+HTTP GET against the Pokemon API. That API endpoint returns a bunch of data
+as a JSON response, so each application must also parse JSON and turn it into a
+native data structure &ndash; a <code>dict</code> for Python and a <code>map</code> for Go.</p><p>Run both the Python and Go version a few times and record their total times.
+This will provide a baseline of performance so that we can understand the
+gains from executing multiple requests &ldquo;at the same time.&rdquo;</p><blockquote><p>Okay, I&rsquo;m not even going to lie here: I actually thought I&rsquo;d see comparable
+time taken. I tried to put it in the same container that the Python app
+runs in just to be sure it wasn&rsquo;t a weird thing about my environment, and&mldr;
+it only added half of a second. I <em>seriously</em> contemplated binning this
+post because of how much faster the Go implementation was because I knew it
+would make the concurrency gains seem so tiny for Go compared to Python.</p></blockquote><h2 id=refactoring-to-catch-em-all>Refactoring to Catch &lsquo;Em All!</h2><p>Ok, so our serial API calls are costing us quite a bit of time. Our Python
+codebase is taking around 25 seconds, and our Go application is clocking in at
+6 or 7 seconds. We&rsquo;ll start by refactoring our Python code to make multiple
+API calls &ldquo;at the same time.&rdquo;</p><blockquote><p>&ldquo;At the same time&rdquo; is misleading, since we&rsquo;ll be using asynchronous
+programming and not parallel programming. Basically, HTTP calls will be
+fired off and then &ldquo;sent to the background.&rdquo; While they&rsquo;re blocking on
+things like network I/O, others will be kicked off. At the end, the results
+are gathered up and handled syncrhonously.</p></blockquote><h3 id=python-1>Python</h3><p>When it&rsquo;s time to reap the rewards of asynchronous programming in Python, we
+run into our first problem: the very popular and frequently-used <code>requests</code>
+library doesn&rsquo;t really support Python&rsquo;s <code>asyncio</code>. This means that if you want
+any sort of ability to do multiple HTTP requests simultaneously, you need to
+either write multi-threading or multi-processing code or use a library other
+than <code>requests</code>. I&rsquo;m going to take the latter option, because multi-processing
+in Python is more frustrating than <code>asyncio</code>.</p><blockquote><p>Spoiler: I picked <code>requests</code> on purpose, knowing it didn&rsquo;t support <code>asyncio</code>.
+I did it to intentionally exaggerate the comparison between Python and Go,
+but I <em>also</em> did it to showcase a very real problem when trying to add
+asynchronous code later in your application when you identify a bottleneck:
+it can be tricky and painful.</p></blockquote><p>The package we&rsquo;ll use is <code>aiohttp</code>, which is an <code>asyncio</code>-compatible HTTP
+library. To adapt our code, we will now need to&mldr;completely rewrite our
+code and introduce new Python keywords in front of our function definitions and
+context managers. If you&rsquo;ve never used <code>asyncio</code>, be prepared for your Python
+code to look a whole lot less elegant.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#75715e>#!/usr/bin/env python</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>import</span> aiohttp
+</span></span><span style=display:flex><span><span style=color:#f92672>import</span> asyncio
+</span></span><span style=display:flex><span><span style=color:#f92672>import</span> time
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># Use the &#34;async&#34; Python keyword to tell Python that this function is async</span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>async</span> <span style=color:#66d9ef>def</span> <span style=color:#a6e22e>main</span>():
+</span></span><span style=display:flex><span>    <span style=color:#75715e># Use the &#34;async&#34; keyword to create an async-compatible context manager</span>
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>async</span> <span style=color:#66d9ef>with</span> aiohttp<span style=color:#f92672>.</span>ClientSession() <span style=color:#66d9ef>as</span> session:
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>for</span> number <span style=color:#f92672>in</span> range(<span style=color:#ae81ff>1</span>, <span style=color:#ae81ff>151</span>):
+</span></span><span style=display:flex><span>            pokemon_url <span style=color:#f92672>=</span> <span style=color:#e6db74>f</span><span style=color:#e6db74>&#39;https://pokeapi.co/api/v2/pokemon/</span><span style=color:#e6db74>{</span>number<span style=color:#e6db74>}</span><span style=color:#e6db74>&#39;</span>
+</span></span><span style=display:flex><span>            <span style=color:#75715e># Use the &#34;async&#34; keyword to create an async-compatible context</span>
+</span></span><span style=display:flex><span>            <span style=color:#75715e># manager and HTTP GET request</span>
+</span></span><span style=display:flex><span>            <span style=color:#66d9ef>async</span> <span style=color:#66d9ef>with</span> session<span style=color:#f92672>.</span>get(pokemon_url) <span style=color:#66d9ef>as</span> response:
+</span></span><span style=display:flex><span>                <span style=color:#75715e># Block the request until we have received the response and can</span>
+</span></span><span style=display:flex><span>                <span style=color:#75715e># parse it as JSON using the `await` Python keyword</span>
+</span></span><span style=display:flex><span>                pokemon <span style=color:#f92672>=</span> <span style=color:#66d9ef>await</span> response<span style=color:#f92672>.</span>json()
+</span></span><span style=display:flex><span>                print(pokemon[<span style=color:#e6db74>&#34;name&#34;</span>])
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>if</span> __name__ <span style=color:#f92672>==</span> <span style=color:#e6db74>&#34;__main__&#34;</span>:
+</span></span><span style=display:flex><span>    start_time <span style=color:#f92672>=</span> time<span style=color:#f92672>.</span>time()
+</span></span><span style=display:flex><span>    <span style=color:#75715e># Run the `main` function in the `asyncio` loop</span>
+</span></span><span style=display:flex><span>    asyncio<span style=color:#f92672>.</span>run(main())
+</span></span><span style=display:flex><span>    print(<span style=color:#e6db74>&#34;Total Time: </span><span style=color:#e6db74>%s</span><span style=color:#e6db74> Seconds&#34;</span> <span style=color:#f92672>%</span> (time<span style=color:#f92672>.</span>time() <span style=color:#f92672>-</span> start_time))
+</span></span></code></pre></div><p>Update your <code>Dockerfile</code>:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-docker data-lang=docker><span style=display:flex><span><span style=color:#66d9ef>FROM</span><span style=color:#e6db74> python:3.8-slim-buster</span><span style=color:#960050;background-color:#1e0010>
+</span></span></span><span style=display:flex><span><span style=color:#960050;background-color:#1e0010>
+</span></span></span><span style=display:flex><span><span style=color:#960050;background-color:#1e0010></span><span style=color:#66d9ef>WORKDIR</span><span style=color:#e6db74> /app</span><span style=color:#960050;background-color:#1e0010>
+</span></span></span><span style=display:flex><span><span style=color:#960050;background-color:#1e0010></span><span style=color:#66d9ef>RUN</span> pip3 install aiohttp<span style=color:#960050;background-color:#1e0010>
+</span></span></span><span style=display:flex><span><span style=color:#960050;background-color:#1e0010></span><span style=color:#66d9ef>COPY</span> app.py .<span style=color:#960050;background-color:#1e0010>
+</span></span></span><span style=display:flex><span><span style=color:#960050;background-color:#1e0010>
+</span></span></span><span style=display:flex><span><span style=color:#960050;background-color:#1e0010></span><span style=color:#66d9ef>CMD</span> [<span style=color:#e6db74>&#34;python3&#34;</span>, <span style=color:#e6db74>&#34;app.py&#34;</span>]<span style=color:#960050;background-color:#1e0010>
+</span></span></span></code></pre></div><p>And rebuild and run your newly asynchronous Python code:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ podman build -t blog .
+</span></span><span style=display:flex><span>$ podman run --rm -it blog
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>&lt;SNIP -- A whole lotta Pokemon!&gt;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Total Time: 7.189948081970215 Seconds
+</span></span></code></pre></div><p>As you can see, it&rsquo;s a <em>lot</em> faster &ndash; around 350% faster! But to get this
+huge performance gain, we had to either know in advance that our script or
+application would need us to implement some sort of simultaneous coding or we&rsquo;d
+have to do a whole lot of work refactoring and picking different packages.
+These sorts of gains are even more obvious the longer you&rsquo;re blocked on network
+I/O &ndash; say, when you&rsquo;re configuring network devices over SSH 100ms away.</p><blockquote><p>It&rsquo;s important to note here that it is possible to make the Python code
+perform even faster by refactoring even more. In fact, the problem is that
+this code isn&rsquo;t <em>actually</em> all that concurrent and has a sneaky, deceptive
+bug caused by a naive first pass at the implementation. I&rsquo;ll show how to
+fix this at the <em>very</em> end of the blog post, after all of the conclusions,
+just to be fair. However, I was very much trying to tackle the &ldquo;easiest&rdquo; way
+to refactor for concurrency in Python &ndash; it gets even more complex when you
+want to get better performance (especially when compared to the simplicity
+of Go).</p></blockquote><h3 id=go-1>Go</h3><p>Look, I thought it wasn&rsquo;t going to be worth showing the time savings in Go when
+I started writing the code. I mean, our serial, synchronous, &ldquo;slow&rdquo; Go
+implementation was already as fast as our asynchronous &ldquo;fast&rdquo; Python code! But
+I&rsquo;ve gotta say &ndash; it&rsquo;s hilariously worth it. Enough with the waiting, though.
+On to the code!</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go><span style=display:flex><span><span style=color:#f92672>package</span> <span style=color:#a6e22e>main</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#f92672>import</span> (
+</span></span><span style=display:flex><span>	<span style=color:#e6db74>&#34;encoding/json&#34;</span>
+</span></span><span style=display:flex><span>	<span style=color:#e6db74>&#34;fmt&#34;</span>
+</span></span><span style=display:flex><span>	<span style=color:#e6db74>&#34;io/ioutil&#34;</span>
+</span></span><span style=display:flex><span>	<span style=color:#e6db74>&#34;strconv&#34;</span>
+</span></span><span style=display:flex><span>	<span style=color:#e6db74>&#34;net/http&#34;</span>
+</span></span><span style=display:flex><span>	<span style=color:#e6db74>&#34;time&#34;</span>
+</span></span><span style=display:flex><span>	<span style=color:#75715e>// Import the sync package so we can wait for all requests to finish
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>	<span style=color:#75715e>// before exiting the program
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>	<span style=color:#e6db74>&#34;sync&#34;</span>
+</span></span><span style=display:flex><span>)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>func</span> <span style=color:#a6e22e>main</span>() {
+</span></span><span style=display:flex><span>	<span style=color:#a6e22e>startTime</span> <span style=color:#f92672>:=</span> <span style=color:#a6e22e>time</span>.<span style=color:#a6e22e>Now</span>()
+</span></span><span style=display:flex><span>	<span style=color:#a6e22e>client</span> <span style=color:#f92672>:=</span> <span style=color:#a6e22e>http</span>.<span style=color:#a6e22e>Client</span>{
+</span></span><span style=display:flex><span>		<span style=color:#a6e22e>Timeout</span>: <span style=color:#a6e22e>time</span>.<span style=color:#a6e22e>Second</span> <span style=color:#f92672>*</span> <span style=color:#ae81ff>2</span>,
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=color:#75715e>// Create a WaitGroup, effectively treated as a queue that must finish
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>	<span style=color:#75715e>// before we can exit
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>	<span style=color:#66d9ef>var</span> <span style=color:#a6e22e>wg</span> <span style=color:#a6e22e>sync</span>.<span style=color:#a6e22e>WaitGroup</span>
+</span></span><span style=display:flex><span>	<span style=color:#66d9ef>for</span> <span style=color:#a6e22e>i</span> <span style=color:#f92672>:=</span> <span style=color:#ae81ff>1</span>; <span style=color:#a6e22e>i</span> &lt; <span style=color:#ae81ff>151</span>; <span style=color:#a6e22e>i</span><span style=color:#f92672>++</span> {
+</span></span><span style=display:flex><span>		<span style=color:#75715e>// Add one item to the WaitGroup (&#34;queue&#34;) per iteration
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>		<span style=color:#a6e22e>wg</span>.<span style=color:#a6e22e>Add</span>(<span style=color:#ae81ff>1</span>)
+</span></span><span style=display:flex><span>		<span style=color:#75715e>// Reset the `i` var to prevent scoping issues
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>		<span style=color:#75715e>// (this is covered in the Go FAQ)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>		<span style=color:#a6e22e>i</span> <span style=color:#f92672>:=</span> <span style=color:#a6e22e>i</span>
+</span></span><span style=display:flex><span>		<span style=color:#75715e>// Create an anonymous function/closure and run it as a
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>		<span style=color:#75715e>// goroutine
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>		<span style=color:#66d9ef>go</span> <span style=color:#66d9ef>func</span>() {
+</span></span><span style=display:flex><span>			<span style=color:#75715e>// Remove one piece of work from the WaitGroup &#34;queue&#34;
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>			<span style=color:#75715e>// _after_ the rest of the anonymous function finishes
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>			<span style=color:#66d9ef>defer</span> <span style=color:#a6e22e>wg</span>.<span style=color:#a6e22e>Done</span>()
+</span></span><span style=display:flex><span>			<span style=color:#a6e22e>pokemon_url</span> <span style=color:#f92672>:=</span> <span style=color:#e6db74>&#34;https://pokeapi.co/api/v2/pokemon/&#34;</span> <span style=color:#f92672>+</span> <span style=color:#a6e22e>strconv</span>.<span style=color:#a6e22e>Itoa</span>(<span style=color:#a6e22e>i</span>)
+</span></span><span style=display:flex><span>			<span style=color:#66d9ef>var</span> <span style=color:#a6e22e>pokemon</span> <span style=color:#66d9ef>map</span>[<span style=color:#66d9ef>string</span>]<span style=color:#66d9ef>interface</span>{}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>			<span style=color:#a6e22e>res</span>, <span style=color:#a6e22e>_</span> <span style=color:#f92672>:=</span> <span style=color:#a6e22e>client</span>.<span style=color:#a6e22e>Get</span>(<span style=color:#a6e22e>pokemon_url</span>)
+</span></span><span style=display:flex><span>			<span style=color:#66d9ef>defer</span> <span style=color:#a6e22e>res</span>.<span style=color:#a6e22e>Body</span>.<span style=color:#a6e22e>Close</span>()
+</span></span><span style=display:flex><span>	
+</span></span><span style=display:flex><span>			<span style=color:#a6e22e>body</span>, <span style=color:#a6e22e>_</span> <span style=color:#f92672>:=</span> <span style=color:#a6e22e>ioutil</span>.<span style=color:#a6e22e>ReadAll</span>(<span style=color:#a6e22e>res</span>.<span style=color:#a6e22e>Body</span>)
+</span></span><span style=display:flex><span>			<span style=color:#a6e22e>json</span>.<span style=color:#a6e22e>Unmarshal</span>(<span style=color:#a6e22e>body</span>, <span style=color:#f92672>&amp;</span><span style=color:#a6e22e>pokemon</span>)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>			<span style=color:#a6e22e>fmt</span>.<span style=color:#a6e22e>Println</span>(<span style=color:#a6e22e>pokemon</span>[<span style=color:#e6db74>&#34;name&#34;</span>])
+</span></span><span style=display:flex><span>		}()
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=color:#75715e>// Block until the WaitGroup is decremented to 0 (no items left in the &#34;queue&#34;)
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>	<span style=color:#a6e22e>wg</span>.<span style=color:#a6e22e>Wait</span>()
+</span></span><span style=display:flex><span>	<span style=color:#a6e22e>fmt</span>.<span style=color:#a6e22e>Printf</span>(<span style=color:#e6db74>&#34;Total Time: %s\n&#34;</span>, <span style=color:#a6e22e>time</span>.<span style=color:#a6e22e>Since</span>(<span style=color:#a6e22e>startTime</span>))
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>So, what changes were really made? Well, we made our code asyncrhonous by
+only doing one thing: we wrapped our logic in an anonymous function (the
+<code>func(){}</code>; told it to run as a <a href=https://gobyexample.com/goroutines>goroutine</a> by typing <code>go</code> in front
+of it; and told it to execute immediately by adding the <code>()</code> to the end. In
+other words, to make our code asynchronous, we did this:</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go><span style=display:flex><span><span style=color:#66d9ef>go</span> <span style=color:#66d9ef>func</span>() {
+</span></span><span style=display:flex><span>	<span style=color:#75715e>// our original code here
+</span></span></span><span style=display:flex><span><span style=color:#75715e></span>}()
+</span></span></code></pre></div><p>The rest of the changes &ndash; adding the <code>sync</code> import, all of the <code>wg</code> lines, and
+re-defining the <code>i</code> var (for reasons <a href=https://golang.org/doc/faq#closures_and_goroutines>explained in the FAQ</a>) were to
+resolve some &ldquo;bugs&rdquo; or &ldquo;unexpected behaviors.&rdquo; In particular, the <code>sync</code> and
+<code>wg</code> packages let us perform our network-based calls asynchronously but then
+wait for all of them to finish before exiting the program.</p><p>While you could argue that adding <code>go func(){}()</code> around code isn&rsquo;t all that
+different from adding <code>async</code> in front of everything in Python, and that using
+<code>sync.WaitGroup</code> isn&rsquo;t all that different from <code>await</code> in Python, the bigger
+picture here is that we didn&rsquo;t swap out our HTTP client library. We didn&rsquo;t
+have to meaningfully rewrite any of our Go code to achieve asynchronous code.</p><p>This is a <em>huge</em> difference between Python and Go: you can&rsquo;t assume that Python
+code and libraries support async or non-blocking activities, but with Go, you
+usually can. If something is synchronous or blocking in Go in a way that is
+meaningful, you&rsquo;ll usually find that it has the word <code>sync</code> in the package
+or function. This doesn&rsquo;t mean that asynchronous Go code is bug-free &ndash; you
+still have the problem of locking that any language does. If two things try
+to modify the same file on disk at roughly the same time, you still need to
+deal with file locks. But that&rsquo;s true in other languages, too.</p><p>Okay, enough talking about how much easier it is to refactor code to be
+concurrent in Go. Let&rsquo;s see if we actually get similar performance gains in
+Go as we did in Python!</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ go run main.go
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>&lt;SNIP -- A whole lotta Pokemon!&gt;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Total Time: 763.827633ms
+</span></span></code></pre></div><p>&mldr;I told you it was going to be hilarious. If we round a bit and say that our
+original Go code averaged 7 seconds and our new, concurrent code took around
+800ms on average, we have a performance gain of <strong>875%</strong>. Based on that, we
+can also say that our concurrent Go code is <em>also</em> around 875% faster than our
+concurrent Python code. If we consider the extremes &ndash; our slow Python code
+and our fast Go code &ndash; we find that the concurrent Go code is an absolutely
+staggering 3125% faster than our syncrhonous Python code. Obviously not a fair
+comparison, but hopefully this shows how some very simple changes in Go can
+vastly improve performance &ndash; whereas in Python the gains are <em>less</em> in terms
+of percentage while being more challenging to implement than in Go.</p><h2 id=conclusions>Conclusions</h2><p>I&rsquo;m regularly surprised by Go. I try not to buy into hype, which frequently
+leads me to be pretty late to the game on things. I&rsquo;m a slow burn, I don&rsquo;t
+chase &ldquo;new shiny,&rdquo; and I prefer some maturity in the technologies I dedicate my
+time to learn.</p><p>The idea for this blog post started before I had any idea how any of the code
+would perform. I already knew that concurrent would be faster than
+syncrhonous, and I expected <em>some</em> performance gains in Go compared to Python.
+I didn&rsquo;t expect it to be such a severe difference. It&rsquo;s possible that
+something about my environment contributed to how slow the Python code ran.
+I tried to eliminate that by running the Go code in the exact same container as
+the Python code, but that only made a difference of around 500ms on the
+synchronous code, so I didn&rsquo;t even bother trying for the concurrent version.</p><p>I almost stopped writing this blog post. I wrote the synchronous Go code, and
+it was so much faster than the Python code that I thought rewriting it to be
+concurrent would only shave one or two seconds off &ndash; maybe three. And then I
+wrote the async Python code and became excited again: I knew it would be
+faster, but it had caught up to the synchronous Go code. Since I figured the
+concurrent Go implementation would only be one or two seconds faster, I thought
+it would be an interesting showcase that concurrent Go was only slightly faster
+than concurrent Python. And then I ran it. And then I was convinced it was a
+fluke, so I ran it five more times. Then I thought I must have had a bug.
+Maybe somehow my time calculation was off, so I grabbed an external clock. It
+was the same (within reason &ndash; I&rsquo;m not a robot, I can&rsquo;t react within
+miliseconds). So then I thought that somehow it wasn&rsquo;t fetching all 150
+Pokemon, so I counted them. 150.</p><p>Python performed according to my expectations, which makes sense since I&rsquo;ve
+been writing Python in some capacity for the past 8 years or so. But Go? Go
+shattered my expectations in an amazing way. Is Go the perfect language?
+Nope, definitely not. It has some things about it that I hate, like having
+to read an HTTP body and parse it as JSON (or &ldquo;unmarshal&rdquo; in Go-speak) as two
+separate instructions. Remembering to <code>defer response.Body.Close()</code> is also
+kind of annoying. I expect that these are things that will just become natural
+to me as I gain more experience with the language, similar to remembering how
+nested comprehensions in Python work.</p><p>But is Go a great language? Yes, hands-down. Every bit of Go code in this
+blog post is part of the standard Go library. Go is intended to be concurrent
+by default, making it extremely easy to take syncrhonous code and make it
+asynchronous. Go gives me most of the batteries that I need most frequently
+and only makes me go to the store when I need &ldquo;D&rdquo; batteries. Python, on the
+other hand, feels like it&rsquo;s giving me around half of the most common batteries
+&ndash; they give me &ldquo;AA"s, and &ldquo;9V"s, and (for some reason) &ldquo;D"s, but then it tells
+me <code>go fish</code> for &ldquo;AAA"s and &ldquo;CR2032"s.</p><p>As a final note, I&rsquo;d like to mention that the idea for using the Pokemon API
+wasn&rsquo;t mine. In fact, a lot of the async Python code isn&rsquo;t even originally
+mine! I was plumbing the depths of the Internet trying to find a simple, easy
+snippet of Python <code>asyncio</code> + <code>aiohttp</code> that would be able to scale quite
+well both up and down in terms of number of requests. I wanted something that
+would be simple and easy to follow, but that a reader could easily adjust
+simply by changing the number of loop iterations. I came upon a
+<a href=https://www.twilio.com/blog/asynchronous-http-requests-in-python-with-aiohttp>Twilio blog post</a> that checked all the boxes and used the Pokemon
+API, which scales admirably well since it&rsquo;s simple and has hundreds of Pokemon.
+If you want to see the impacts with fewer API calls, just tune the number of
+iterations in the loop down. Want more? There are 898 Pokemon at the time of
+this writing, each available via the Pokemon API (though you might need better
+error handling and/or rate-limit checking to get that high).</p><h2 id=one-more-thing>One More Thing</h2><p>If you&rsquo;re curious, I tested all 898. In Go, I averaged around 1.5 to 3 seconds
+to catch &rsquo;em all. In our original async Python code , it was a (much more)
+painful 35 seconds&mldr;which, honestly, still a lot better than if it was done in
+serial! But we can, in fact, do better if we refactor just a little bit and
+introduce a little more complexity. After all, I do want to be fair to Python.</p><p>For this, we&rsquo;re going to refactor the code (again) to pull out the call actual
+<code>HTTP GET</code>s into their own <code>async</code> function. We do this because our <code>await</code> is
+actually a problem in our code right now: it&rsquo;s sneakily blocking and isn&rsquo;t
+<em>quite</em> giving us the full benefits of concurrency. See the new and improved
+code below!</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#75715e>#!/usr/bin/env python</span>
+</span></span><span style=display:flex><span><span style=color:#f92672>import</span> aiohttp
+</span></span><span style=display:flex><span><span style=color:#f92672>import</span> asyncio
+</span></span><span style=display:flex><span><span style=color:#f92672>import</span> time
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#75715e># Refactor our HTTP GET code to deal with the sneaky blocking nature of</span>
+</span></span><span style=display:flex><span><span style=color:#75715e># await in the previous code.</span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>async</span> <span style=color:#66d9ef>def</span> <span style=color:#a6e22e>get_pokemon</span>(session, url):
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>async</span> <span style=color:#66d9ef>with</span> session<span style=color:#f92672>.</span>get(url) <span style=color:#66d9ef>as</span> resp:
+</span></span><span style=display:flex><span>        pokemon <span style=color:#f92672>=</span> <span style=color:#66d9ef>await</span> resp<span style=color:#f92672>.</span>json()
+</span></span><span style=display:flex><span>        print(pokemon[<span style=color:#e6db74>&#39;name&#39;</span>])
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>async</span> <span style=color:#66d9ef>def</span> <span style=color:#a6e22e>main</span>():
+</span></span><span style=display:flex><span>    <span style=color:#66d9ef>async</span> <span style=color:#66d9ef>with</span> aiohttp<span style=color:#f92672>.</span>ClientSession() <span style=color:#66d9ef>as</span> session:
+</span></span><span style=display:flex><span>        <span style=color:#75715e># Create a &#34;task queue&#34;, similar to our Go code&#39;s sync.WaitGroup</span>
+</span></span><span style=display:flex><span>        tasks <span style=color:#f92672>=</span> []
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>for</span> number <span style=color:#f92672>in</span> range(<span style=color:#ae81ff>1</span>, <span style=color:#ae81ff>899</span>):
+</span></span><span style=display:flex><span>            pokemon_url <span style=color:#f92672>=</span> <span style=color:#e6db74>f</span><span style=color:#e6db74>&#39;https://pokeapi.co/api/v2/pokemon/</span><span style=color:#e6db74>{</span>number<span style=color:#e6db74>}</span><span style=color:#e6db74>&#39;</span>
+</span></span><span style=display:flex><span>            <span style=color:#75715e># Add an item to the task queue, similar to our use of</span>
+</span></span><span style=display:flex><span>            <span style=color:#75715e># wg.Add(1) in Go, except it&#39;s an actual function call instead</span>
+</span></span><span style=display:flex><span>            <span style=color:#75715e># of just a number.</span>
+</span></span><span style=display:flex><span>            tasks<span style=color:#f92672>.</span>append(
+</span></span><span style=display:flex><span>                get_pokemon(session, pokemon_url)
+</span></span><span style=display:flex><span>            )
+</span></span><span style=display:flex><span>        <span style=color:#75715e># Wait for everything to finish, similar to our Go code&#39;s wg.Wait()</span>
+</span></span><span style=display:flex><span>        <span style=color:#66d9ef>await</span> asyncio<span style=color:#f92672>.</span>gather(<span style=color:#f92672>*</span>tasks)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#66d9ef>if</span> __name__ <span style=color:#f92672>==</span> <span style=color:#e6db74>&#34;__main__&#34;</span>:
+</span></span><span style=display:flex><span>    start_time <span style=color:#f92672>=</span> time<span style=color:#f92672>.</span>time()
+</span></span><span style=display:flex><span>    asyncio<span style=color:#f92672>.</span>run(main())
+</span></span><span style=display:flex><span>    print(<span style=color:#e6db74>&#34;Total Time: </span><span style=color:#e6db74>%s</span><span style=color:#e6db74> Seconds&#34;</span> <span style=color:#f92672>%</span> (time<span style=color:#f92672>.</span>time() <span style=color:#f92672>-</span> start_time))
+</span></span></code></pre></div><p>This gives me a much more respectable average of 3-5 seconds. The Go code is
+still noticeably faster, but the difference is demonstrably smaller.
+Interestingly, if we compare this to our Go implementation, we can see that it
+is incredibly similar in its ideas.</p><p>So, did I give Python an unfair disadvantage? Possibly. But I think that in
+the end, this really shows how Python&rsquo;s implementations aren&rsquo;t &ldquo;obvious.&rdquo;
+I had to refactor twice: once for the seemingly obvious concurrency approach,
+and again to deal with a non-obvious blocker, each time making my code slightly
+less readable and introducing new patterns. In Go, there was really only one
+way to accomplish this, and it was incredibly obvious. Once again, Go is
+better at the Zen of Python than Python is.</p><p>Finally, there&rsquo;s a lot about concurrency in Python that changes quite
+frequently over time. There&rsquo;s an absolutely <a href=https://www.integralist.co.uk/posts/python-asyncio/>phenomenal blog post</a>
+that goes into a <em>lot</em> of depth on Python concurrency. In it, there are
+several notes about how things have evolved from one minor version to another
+in a way that changes what the best practices are for code written in those
+versions. I&rsquo;m happy for improvements, but one of the things I like about Go
+is that the fundamentals don&rsquo;t change all that much from one version to the
+next.</p></article></div><div class="meta article-card"><div class=row><span class=label><svg xmlns="http://www.w3.org/2000/svg" class="ionicon" viewBox="0 0 512 512"><path d="M32 456a24 24 0 0024 24h4e2a24 24 0 0024-24V176H32zm320-244a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm0 80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm-80-80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm0 80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm0 80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm-80-80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm0 80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm-80-80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zm0 80a4 4 0 014-4h40a4 4 0 014 4v40a4 4 0 01-4 4h-40a4 4 0 01-4-4zM456 64h-55.92V32h-48v32H159.92V32h-48v32H56A23.8 23.8.0 0032 87.77V144h448V87.77A23.8 23.8.0 00456 64z"/></svg>Published At</span><time>2022-04-14 00:00 UTC</time></div><div class=row><span class=label><svg xmlns="http://www.w3.org/2000/svg" class="ionicon" viewBox="0 0 512 512"><path d="M288 16 0 304l176 176 288-288V16zm80 128a32 32 0 1132-32 32 32 0 01-32 32z"/><path d="M480 64v144L216.9 471.1 242 496l270-272V64h-32z"/></svg>Tagged with</span><ul class=tags><li class=hashed-tag><a href=https://blog.itsalwaysthe.network/tags/python>python</a></li><li class=hashed-tag><a href=https://blog.itsalwaysthe.network/tags/go>go</a></li><li class=hashed-tag><a href=https://blog.itsalwaysthe.network/tags/series>series</a></li><li class=hashed-tag><a href=https://blog.itsalwaysthe.network/tags/series-go-vs-python>series-go-vs-python</a></li></ul></div><div class="row social-share"><span class=label><svg xmlns="http://www.w3.org/2000/svg" class="ionicon" viewBox="0 0 512 512"><path d="M272 176v161h-32V176H92a12 12 0 00-12 12v280a12 12 0 0012 12h328a12 12 0 0012-12V188a12 12 0 00-12-12zm0-83.37 64 64L358.63 134 256 31.37 153.37 134 176 156.63l64-64V176h32V92.63z"/></svg>Share with</span>
+<a target=_blank title="share to reddit" rel="noopener noreferrer" aria-label="share Comparing the Basics of Go and Python for New Programmers -- Part 2 on reddit" href="https://reddit.com/submit?url=https%3a%2f%2fblog.itsalwaysthe.network%2fposts%2fcomparing-go-and-python-part-2%2f&title=Comparing%20the%20Basics%20of%20Go%20and%20Python%20for%20New%20Programmers%20--%20Part%202"><svg xmlns="http://www.w3.org/2000/svg" class="ionicon" viewBox="0 0 512 512" fill="currentcolor" stroke="currentcolor" stroke-width="10"><path d="M324 256a36 36 0 1036 36 36 36 0 00-36-36z"/><circle cx="188" cy="292" r="36" transform="rotate(-22.5 187.997 291.992)"/><path d="M496 253.77c0-31.19-25.14-56.56-56-56.56a55.72 55.72.0 00-35.61 12.86c-35-23.77-80.78-38.32-129.65-41.27l22-79 66.41 13.2c1.9 26.48 24 47.49 50.65 47.49 28 0 50.78-23 50.78-51.21S441 48 413 48c-19.53.0-36.31 11.19-44.85 28.77l-90-17.89-31.1 109.52-4.63.13c-50.63 2.21-98.34 16.93-134.77 41.53A55.38 55.38.0 0072 197.21c-30.89.0-56 25.37-56 56.56a56.43 56.43.0 0028.11 49.06 98.65 98.65.0 00-.89 13.34c.11 39.74 22.49 77 63 105C146.36 448.77 199.51 464 256 464s109.76-15.23 149.83-42.89c40.53-28 62.85-65.27 62.85-105.06a109.32 109.32.0 00-.84-13.3A56.32 56.32.0 00496 253.77zM414 75a24 24 0 11-24 24 24 24 0 0124-24zM42.72 253.77a29.6 29.6.0 0129.42-29.71 29 29 0 0113.62 3.43c-15.5 14.41-26.93 30.41-34.07 47.68a30.23 30.23.0 01-8.97-21.4zM390.82 399c-35.74 24.59-83.6 38.14-134.77 38.14S157 423.61 121.29 399c-33-22.79-51.24-52.26-51.24-83A78.5 78.5.0 0175 288.72c5.68-15.74 16.16-30.48 31.15-43.79a155.17 155.17.0 0114.76-11.53l.3-.21.24-.17c35.72-24.52 83.52-38 134.61-38s98.9 13.51 134.62 38l.23.17.34.25A156.57 156.57.0 01406 244.92c15 13.32 25.48 28.05 31.16 43.81a85.44 85.44.0 014.31 17.67 77.29 77.29.0 01.6 9.65c-.01 30.72-18.21 60.19-51.25 82.95zm69.6-123.92c-7.13-17.28-18.56-33.29-34.07-47.72A29.09 29.09.0 01440 224a29.59 29.59.0 0129.41 29.71 30.07 30.07.0 01-8.99 21.39z"/><path d="M323.23 362.22c-.25.25-25.56 26.07-67.15 26.27-42-.2-66.28-25.23-67.31-26.27a4.14 4.14.0 00-5.83.0l-13.7 13.47a4.15 4.15.0 000 5.89c3.4 3.4 34.7 34.23 86.78 34.45 51.94-.22 83.38-31.05 86.78-34.45a4.16 4.16.0 000-5.9l-13.71-13.47a4.13 4.13.0 00-5.81.0z"/></svg></a><a target=_blank title="share to twitter" rel="noopener noreferrer" aria-label="share Comparing the Basics of Go and Python for New Programmers -- Part 2 on twitter" href="https://twitter.com/intent/tweet/?text=Comparing%20the%20Basics%20of%20Go%20and%20Python%20for%20New%20Programmers%20--%20Part%202&url=https%3a%2f%2fblog.itsalwaysthe.network%2fposts%2fcomparing-go-and-python-part-2%2f&hashtags=python%2cgo%2cseries%2cseries-go-vs-python"><svg class="ionicon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="fill:none" stroke="currentcolor" stroke-width="2"><path d="M23 3a10.9 10.9.0 01-3.14 1.53 4.48 4.48.0 00-7.86 3v1A10.66 10.66.0 013 4s-4 9 5 13a11.64 11.64.0 01-7 2c9 5 20 0 20-11.5a4.5 4.5.0 00-.08-.83A7.72 7.72.0 0023 3z"/></svg></a><a target=_blank title="share to facebook" rel="noopener noreferrer" aria-label="share Comparing the Basics of Go and Python for New Programmers -- Part 2 on facebook" href="https://facebook.com/sharer/sharer.php?u=https%3a%2f%2fblog.itsalwaysthe.network%2fposts%2fcomparing-go-and-python-part-2%2f"><svg xmlns="http://www.w3.org/2000/svg" class="ionicon" viewBox="0 0 24 24" style="fill:none" stroke="currentcolor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-facebook"><path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/></svg></a></div></div></div></main><footer id=footer><div class="container has-padding is-flex"><ul class=links><li><a rel=nofollow target=_blank href=https://twitter.com/supertylerc title=Twitter>Twitter</a></li><li><a class="nav-link navbar-button" href=https://blog.itsalwaysthe.network/index.xml type=application/rss+xml>RSS</a></li><li><a rel=nofollow target=_blank href=https://github.com/wayjam/hugo-theme-fluency title="using Hugo theme fluency">Theme Fluency</a></li><li><a rel=nofollow target=_blank href=https://gohugo.io title="Built with hugo">Built with Hugo</a></li></ul><div class=copyright>&copy; 2022 It's Always the Network</div></div></footer><script>window.FluencyCopyIcon="\n\n\n\n\n\n\n\u003csvg xmlns=\u0027http://www.w3.org/2000/svg\u0027 class=\u0027ionicon\u0027 viewBox=\u00270 0 512 512\u0027\u003e\u003crect x=\u0027128\u0027 y=\u0027128\u0027 width=\u0027336\u0027 height=\u0027336\u0027 rx=\u002757\u0027 ry=\u002757\u0027 stroke-linejoin=\u0027round\u0027 class=\u0027ionicon-fill-none ionicon-stroke-width\u0027/\u003e\u003cpath d=\u0027M383.5 128l.5-24a56.16 56.16 0 00-56-56H112a64.19 64.19 0 00-64 64v216a56.16 56.16 0 0056 56h24\u0027 stroke-linecap=\u0027round\u0027 stroke-linejoin=\u0027round\u0027 class=\u0027ionicon-fill-none ionicon-stroke-width\u0027/\u003e\u003c/svg\u003e\n\n\n\n\n\n\n\n\n\n\n"</script><script defer src=https://blog.itsalwaysthe.network/js/main.min.b62162eb64232ce1a1cc62740790672a39ba8c30b022a93fe4c86cef053ba08f.js integrity="sha256-tiFi62QjLOGhzGJ0B5BnKjm6jDCwIqk/5Mhs7wU7oI8=" crossorigin=anonymous async></script><noscript><style type=text/css>#theme-selector-button{display:none}</style></noscript></body></html>
