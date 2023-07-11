@@ -133,7 +133,7 @@ There are a few important differences, though:
 * Go requires you to specify a type for the "list" (in this case, it's a
   `slice` in Go terminology)
 * Go requires you to add a comma to the end of the last element when defining
-  a multi-line construct, an opinionated behavior that can saving you from the
+  a multi-line construct, an opinionated behavior that can save you from the
   annoyance of searching for a syntax error because you forgot to add a comma
   before adding a new item
 * Go has a built-in way to "print", but it's part of the built-in `fmt` package
